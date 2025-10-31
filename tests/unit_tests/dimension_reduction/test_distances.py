@@ -12,9 +12,9 @@ import sys
 def test_euclidean_distance_2points():
     x = np.array([[2.0, 3.1], [4.0, 1.25]])
     d = L2Distance()
-    distance = np.round(d.compute_distance(xi=np.array([2.0, 3.1]), xj=np.array([4.0, 1.25])), 3)
+    distance = np.round(d.compute_distance(xi=np.array([2.0, 3.1]), xj=np.array([4.0, 1.25])), 6)
 
-    assert distance == 2.724
+    assert distance == 2.724427
 
 
 def test_grassmann_distance():
