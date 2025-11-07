@@ -21,34 +21,36 @@ def test_DirectPOD_listData():
     list_data = list(Data)
     pod_dir = DirectPOD(solution_snapshots=list_data, reconstruction_percentage=100)
     np.testing.assert_allclose(
-        pod_dir.reconstructed_solution[0][1][1], 0.3054, rtol=1e-4
+        pod_dir.reconstructed_solution[0][1][1], 0.3054, atol=1e-6
     )
 
 
 def test_DirectPOD():
     pod_dir = DirectPOD(solution_snapshots=Data, n_modes=1)
     reconstructed_solutions = pod_dir.reconstructed_solution
-    np.testing.assert_allclose(reconstructed_solutions[0][1][1], 0.761704, rtol=1e-6)
+    np.testing.assert_allclose(reconstructed_solutions[0][1][1], 0.761704, atol=1e-6)
 
 
 def test_SnapshotPOD():
     pod_snap = SnapshotPOD(solution_snapshots=Data, n_modes=1)
     reconstructed_solutions = pod_snap.reconstructed_solution
-    np.testing.assert_allclose(reconstructed_solutions[0][1][1], -0.181528, rtol=1e-6)
+    np.testing.assert_allclose(reconstructed_solutions[0][1][1], -0.181528, atol=1e-6)
 
 
 def test_SnapshotPOD_listData():
     list_data = list(Data)
     pod_dir = SnapshotPOD(solution_snapshots=list_data, reconstruction_percentage=100)
-    np.testing.assert_allclose(
-        pod_dir.reconstructed_solution[0][1][1], 0.3054, rtol=1e-4
-    )
+    actual_result = pod_dir.reconstructed_solution[0][1][1]
+    expected_result = 0.3054
+    np.testing.assert_allclose(actual_result, expected_result, atol=1e-6)
 
 
 def test_POD_unfold():
     list_data = list(Data)
     pod_output = HigherOrderSVD.unfold3d(list_data)
-    np.testing.assert_allclose(pod_output[0][0][1], 6.7121, rtol=1e-4)
+    actual_result = pod_output[0][0][1]
+    expected_result = 6.7121
+    np.testing.assert_allclose(actual_result, expected_result, atol=1e-6)
 
 
 def test_HOSVD():
@@ -56,7 +58,7 @@ def test_HOSVD():
     reconstructed_solutions = HigherOrderSVD.reconstruct(
         hosvd.u1, hosvd.u2, hosvd.u3hat, hosvd.s3hat
     )
-    np.testing.assert_allclose(reconstructed_solutions[0][1][1], 0.714928, rtol=1e-6)
+    np.testing.assert_allclose(reconstructed_solutions[0][1][1], 0.714928, atol=1e-6)
 
 
 def test_DirectPOD_modes_less_than_zero():
