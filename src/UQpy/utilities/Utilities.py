@@ -270,7 +270,7 @@ def _get_a_plus(a):
 def _get_ps(a, w=None):
     w05 = np.asarray(w**0.5)
 
-    return w05.I * _get_a_plus(w05 * a * w05) * w05.I
+    return w05 * _get_a_plus(w05 * a * w05) * w05
 
 
 def _get_pu(a, w=None):
