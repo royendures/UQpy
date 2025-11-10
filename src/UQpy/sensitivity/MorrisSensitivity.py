@@ -88,9 +88,9 @@ class MorrisSensitivity:
         self.elementary_effects: NumpyFloatArray = None
         """Elementary effects :math:`EE_{k}`, :class:`numpy.ndarray` of shape :code:`(n_trajectories, d, ny)`."""
         self.mustar_indices: NumpyFloatArray = None
-        """First Morris sensitivity index :math:`\mu_{k}^{\star}`, :class:`numpy.ndarray` of shape :code:`(d, ny)`"""
+        r"""First Morris sensitivity index :math:`\mu_{k}^{\star}`, :class:`numpy.ndarray` of shape :code:`(d, ny)`"""
         self.sigma_indices: NumpyFloatArray = None
-        """Second Morris sensitivity index :math:`\sigma_{k}`, :class:`numpy.ndarray` of shape :code:`(d, ny)`"""
+        r"""Second Morris sensitivity index :math:`\sigma_{k}`, :class:`numpy.ndarray` of shape :code:`(d, ny)`"""
 
         if n_trajectories is not None:
             self.run(n_trajectories)
@@ -275,7 +275,7 @@ class MorrisSensitivity:
                 np.argwhere(bi != 0.0)[0, 0] for bi in (samples[1:] - samples[:-1])
             ]
             for count_d, d in enumerate(perms):
-                el_effect[d] = (qoi[count_d + 1] - qoi[count_d]) / self.delta
+                el_effect[d] = ((qoi[count_d + 1] - qoi[count_d]) / self.delta).item()
             elementary_effects.append(el_effect)
         return np.array(elementary_effects)
 

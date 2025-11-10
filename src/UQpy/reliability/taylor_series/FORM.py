@@ -238,7 +238,7 @@ class FORM(TaylorSeries):
             self.alpha = alpha.squeeze()
             self.alpha_record.append(self.alpha)
             beta[k] = -np.inner(u[k, :].T, self.alpha)
-            beta[k + 1] = beta[k] + qoi / norm_of_state_function_gradient
+            beta[k + 1] = (beta[k] + qoi / norm_of_state_function_gradient).item()
             self.logger.info(
                 "Beta: {0}\n".format(beta[k])
                 + "Pf: {0}".format(stats.norm.cdf(-beta[k]))

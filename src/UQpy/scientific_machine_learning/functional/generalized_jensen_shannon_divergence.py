@@ -72,9 +72,9 @@ def generalized_jensen_shannon_divergence(
                 mixture_pdf_prior_samples
             )
 
-            js_divergence[j] += ((1 - alpha) * kl_divergence_q_m) + (
-                alpha * kl_divergence_p_m
-            )
+            js_divergence[j] += (
+                ((1 - alpha) * kl_divergence_q_m) + (alpha * kl_divergence_p_m)
+            ).item()
     js_divergence /= n_samples
     js_divergence = torch.tensor(js_divergence, device=device)
 

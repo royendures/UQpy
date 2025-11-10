@@ -180,7 +180,7 @@ class SequentialTemperingMCMC(TemperingMCMC):
                     - self.evaluate_log_intermediate(
                         points[i, :].reshape((1, -1)), previous_tempering_parameter
                     )
-                )
+                ).item()
 
             # Calculate normalizing constant for the plausibility weights (sum of the weights)
             w_sum = np.sum(weights)
@@ -249,7 +249,7 @@ class SequentialTemperingMCMC(TemperingMCMC):
                             points[lead_index, :].reshape((1, -1)),
                             previous_tempering_parameter,
                         )
-                    )
+                    ).item()
                     w_sum = np.sum(weights)
                     for j in range(nsamples):
                         weight_probabilities[j] = weights[j] / w_sum
@@ -336,7 +336,7 @@ class SequentialTemperingMCMC(TemperingMCMC):
                 q_scaled[i2] = np.exp(
                     q_func(samples[i2, :].reshape((1, -1)), 1)
                     - q_func(samples[i2, :].reshape((1, -1)), temper_param_prev)
-                )
+                ).item()
             sigma_1 = np.std(q_scaled)
             mu_1 = np.mean(q_scaled)
             if sigma_1 < mu_1:
@@ -347,7 +347,7 @@ class SequentialTemperingMCMC(TemperingMCMC):
                 q_scaled[i3] = np.exp(
                     q_func(samples[i3, :].reshape((1, -1)), temper_param_trial)
                     - q_func(samples[i3, :].reshape((1, -1)), temper_param_prev)
-                )
+                ).item()
             sigma = np.std(q_scaled)
             mu = np.mean(q_scaled)
             if sigma < (0.9 * mu):

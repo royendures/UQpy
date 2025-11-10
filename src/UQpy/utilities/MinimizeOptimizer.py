@@ -47,7 +47,10 @@ class MinimizeOptimizer:
                 method=self.method,
                 bounds=self._bounds,
                 jac=jac,
-                options={"disp": False, "maxiter": 10000, "catol": 0.002},
+                options={
+                    "disp": False,
+                    "maxiter": 10000,
+                },
             )
 
     def apply_constraints(self, constraints):

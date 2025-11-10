@@ -71,7 +71,7 @@ class TaylorSeries(ABC):
             for jj in range(point_u.shape[0]):
                 qoi_plus = y1[2 * jj + 1]
                 qoi_minus = y1[2 * jj + 2]
-                gradient[jj] = (qoi_plus - qoi_minus) / (2 * df_step)
+                gradient[jj] = ((qoi_plus - qoi_minus) / (2 * df_step)).item()
 
             return gradient, y1[0], array_of_samples
 

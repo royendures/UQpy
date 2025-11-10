@@ -222,7 +222,7 @@ class SubsetSimulation:
                         ] = x_run[j]
                         self.performance_function_per_level[conditional_level][
                             (i + 1) * n_keep + ind_false[j]
-                        ] = response_function_values[j]
+                        ] = response_function_values[j].item()
 
                     # Reject the states with g > g_level
                     ind_reject = np.where(

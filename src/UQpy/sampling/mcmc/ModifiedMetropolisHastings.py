@@ -218,7 +218,7 @@ class ModifiedMetropolisHastings(MCMC):
                 ):
                     accept = np.log(unif_rvs[nc]) < r_
                     if accept:
-                        current_state[nc, j] = cand
+                        current_state[nc, j] = cand.item()
                         self.current_log_pdf_marginals[j][nc] = log_p_cand
                         current_log_pdf = np.sum(self.current_log_pdf_marginals)
                         accept_vec[nc] += 1.0 / self.dimension
@@ -254,7 +254,7 @@ class ModifiedMetropolisHastings(MCMC):
                 ):
                     accept = np.log(unif_rvs[nc]) < r_
                     if accept:
-                        current_state[nc, j] = cand
+                        current_state[nc, j] = cand.item()
                         current_log_pdf[nc] = float(log_p_cand)
                         accept_vec[nc] += 1.0 / self.dimension
                     else:

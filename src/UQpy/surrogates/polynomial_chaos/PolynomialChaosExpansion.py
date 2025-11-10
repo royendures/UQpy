@@ -140,7 +140,7 @@ class PolynomialChaosExpansion(Surrogate):
             * np.sum(((y - y_val) / (1 - Hdiag)) ** 2, axis=0)
         ) / (np.sum((y - mu_yval) ** 2, axis=0))
         if y.ndim == 1 or y.shape[1] == 1:
-            eps_val = float(eps_val)
+            eps_val = eps_val.item()
 
         return np.round(eps_val, 7)
 
@@ -220,8 +220,8 @@ class PolynomialChaosExpansion(Surrogate):
         variance = np.sum(self.coefficients[1:] ** 2, axis=0)
 
         if self.coefficients.ndim == 1 or self.coefficients.shape[1] == 1:
-            variance = float(variance)
-            mean = float(mean)
+            variance = variance.item()
+            mean = mean.item()
 
         if not higher:
             return mean, variance

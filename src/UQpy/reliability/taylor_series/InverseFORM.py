@@ -206,7 +206,7 @@ class InverseFORM(TaylorSeries):
                 order="first",
             )
             self.logger.info(f"State Function: {qoi}")
-            state_function[iteration + 1] = qoi
+            state_function[iteration + 1] = qoi.item()
 
             alpha = state_function_gradient[iteration + 1]
             alpha /= np.linalg.norm(state_function_gradient[iteration + 1])

@@ -196,8 +196,10 @@ def test_form_example():
     Q.run()
 
     # print results
-    np.allclose(Q.design_point_u, np.array([-2.0, 1.0]))
-    np.allclose(Q.design_point_x, np.array([160.0, 160.0]))
-    assert Q.beta[0] == 2.236067977499917
-    assert Q.failure_probability[0] == 0.012673659338729965
-    np.allclose(Q.state_function_gradient_record, np.array([0.0, 0.0]))
+    np.testing.assert_allclose(Q.design_point_u[0], np.array([-2.0, 1.0]))
+    np.testing.assert_allclose(Q.design_point_x[0], np.array([160.0, 160.0]))
+    np.testing.assert_allclose(Q.beta[0], 2.236067977499917)
+    np.testing.assert_allclose(Q.failure_probability[0], 0.012673659338729965)
+    np.testing.assert_allclose(
+        Q.state_function_gradient_record[0][0], np.array([0.0, 0.0])
+    )

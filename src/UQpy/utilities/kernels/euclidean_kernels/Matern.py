@@ -26,9 +26,9 @@ class Matern(EuclideanKernel):
         elif np.isclose(self.nu, 1.5):
             self.kernel_matrix = (1 + np.sqrt(3) * stack) * np.exp(-np.sqrt(3) * stack)
         elif np.isclose(self.nu, 2.5):
-            self.kernel_matrix = (1 + np.sqrt(5) * stack + 5 * (stack**2) / 3) * np.exp(
-                -np.sqrt(5) * stack
-            )
+            self.kernel_matrix = (
+                1 + np.sqrt(5) * stack + 5 * (stack**2) / 3
+            ) * np.exp(-np.sqrt(5) * stack)
         elif self.nu == np.inf:
             self.kernel_matrix = np.exp(-(stack**2) / 2)
         else:

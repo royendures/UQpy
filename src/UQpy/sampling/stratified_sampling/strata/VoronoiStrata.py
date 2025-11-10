@@ -268,7 +268,7 @@ class VoronoiStrata(Strata):
                         self.points_to_samplesU01,
                     ]
                 )
-        from scipy.spatial.qhull import Delaunay
+        from scipy.spatial import Delaunay
 
         # Define the simplex mesh to be used for gradient estimation and sampling
         self.mesh = Delaunay(
@@ -283,7 +283,7 @@ class VoronoiStrata(Strata):
         self.compute_centroids()
         s = np.zeros(self.mesh.nsimplex)
         for j in range(self.mesh.nsimplex):
-            s[j] = self.mesh.volumes[j] ** 2
+            s[j] = self.mesh.volumes[j].item() ** 2
         return s
 
     def update_strata_and_generate_samples(

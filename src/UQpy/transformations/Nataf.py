@@ -364,7 +364,7 @@ class Nataf:
             for j in range(n):
                 xi = np.array([samples_x[i, j]])
                 zi = np.array([samples_z[i, j]])
-                jac[j, j] = stats.norm.pdf(zi) / self.dist_object[j].pdf(xi)
+                jac[j, j] = (stats.norm.pdf(zi) / self.dist_object[j].pdf(xi)).item()
             jxz[i] = np.linalg.solve(jac, self.H)
 
         return samples_z, jxz
@@ -408,7 +408,7 @@ class Nataf:
             for j in range(n):
                 xi = np.array([samples_x[i, j]])
                 zi = np.array([samples_z[i, j]])
-                jac[j, j] = self.dist_object[j].pdf(xi) / stats.norm.pdf(zi)
+                jac[j, j] = (self.dist_object[j].pdf(xi) / stats.norm.pdf(zi)).item()
             jzx[i] = np.linalg.solve(h, jac)
 
         return samples_x, jzx
