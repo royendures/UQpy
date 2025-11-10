@@ -15,7 +15,7 @@ class ProbabilisticDropout(ProbabilisticDropoutLayer):
         dropping: bool = True,
         **kwargs,
     ):
-        """Randomly zero out some elements of the input tensor with probability :math:`p`
+        r"""Randomly zero out some elements of the input tensor with probability :math:`p`
 
         :param p: Probability of an element to be zeroed. Default: 0.5
         :param inplace: If ``True``, will do this operation in-place. Default: ``False``

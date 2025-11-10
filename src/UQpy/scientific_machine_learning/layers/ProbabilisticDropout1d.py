@@ -15,7 +15,7 @@ class ProbabilisticDropout1d(ProbabilisticDropoutLayer):
         dropping: bool = True,
         **kwargs,
     ):
-        """Randomly zero out entire channels with probability :math:`p`
+        r"""Randomly zero out entire channels with probability :math:`p`
 
         A channel is a 1D feature map
 
