@@ -6,7 +6,6 @@ from UQpy.scientific_machine_learning.baseclass import Loss
 
 @beartype
 class LpLoss(Loss):
-
     def __init__(
         self,
         ord: Union[int, float, str] = 2,

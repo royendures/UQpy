@@ -70,7 +70,6 @@ def nearest_psd(input_matrix, iterations=10):
     delta_s = 0
     psd_matrix = input_matrix.copy()
     for k in range(iterations):
-
         r_k = psd_matrix - delta_s
         x_k = _get_ps(r_k, w=w)
         delta_s = x_k - r_k
@@ -210,7 +209,6 @@ def gradient(runmodel_object=None, point=None, order="first", df_step=None):
         return d2u_dj
 
     elif order.lower() == "mixed":
-
         import itertools
 
         range_ = list(range(dimension))
