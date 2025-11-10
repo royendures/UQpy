@@ -39,10 +39,10 @@ setup(
         "scipy>=1.13.0",
         "matplotlib>=3.9.0",
         "scikit-learn>=1.5.0",
-        "fire==0.6.0",
-        "beartype==0.18.5",
+        "fire>=0.6.0",
+        "beartype>=0.18.5",
         "torch >= 2.2.2",
-        "torchinfo ~= 1.8.0",
+        "torchinfo >= 1.8.0",
     ],
     extras_require={
         "dev": [
