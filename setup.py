@@ -35,13 +35,13 @@ setup(
     package_data={"": ["*.pdf"]},
     python_requires=">3.9.0",
     install_requires=[
-        "numpy==1.26.4",
-        "scipy>=1.6.0",
-        "matplotlib==3.8.4",
-        "scikit-learn==1.4.2",
+        "numpy>=2.0.0",
+        "scipy>=1.13.0",
+        "matplotlib>=3.9.0",
+        "scikit-learn>=1.5.0",
         "fire==0.6.0",
         "beartype==0.18.5",
-        "torch ~= 2.2.2",
+        "torch >= 2.2.2",
         "torchinfo ~= 1.8.0",
     ],
     extras_require={
@@ -58,6 +58,7 @@ setup(
             "sphinx_gallery == 0.13.0",
             "sphinxcontrib_bibtex == 2.5.0",
             "Sphinx==6.1.3",
+            "hypothesis>=6.0.0",
         ]
     },
     classifiers=[
