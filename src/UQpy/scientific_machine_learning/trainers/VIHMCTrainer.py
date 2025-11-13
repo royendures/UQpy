@@ -9,9 +9,9 @@ from torch.func import jacrev, functional_call
 @beartype
 class VIHMCTrainer:
     def __init__(
-        self,
-        det_model: nn.Module,
-        vi_model: nn.Module,
+            self,
+            det_model: nn.Module,
+            vi_model: nn.Module,
     ):
         """
         Prepare to train a Bayesian neural network using hybrid VI-HMC approach
@@ -27,21 +27,6 @@ class VIHMCTrainer:
         self.vi_model = vi_model
         self.mean_params, self.std_params = self._flatten_mean_std()
         self.sens_indices = None
-        self._validate_init()
-
-    def _validate_init(self):
-        params_unflat = util.unflatten(self.model, self.mean_params)
-        x = torch.linspace(-1.2, 1.2, 20, dtype=torch.float).view(-1, 1)
-        self.vi_model.sample(False)
-        y_vi = self.vi_model(x)
-        for i, param in enumerate(self.model.parameters()):
-            param.data = params_unflat[i]
-        y_det = self.model(x)
-        params_named_list = [n for n, _ in self.model.named_parameters()]
-        params_dict = dict(zip(params_named_list, params_unflat))
-        y_func = self.functional_model(params_dict, x)
-        assert torch.allclose(y_vi, y_func), "VI not equal to func"
-        assert torch.allclose(y_vi, y_det), "VI not equal to det"
 
     def _flatten_mean_std(self):
         mean_params = []
@@ -78,7 +63,7 @@ class VIHMCTrainer:
             *x, y = batch_data
             grads_list += self.eval_jac(x) / num_batches
         assert i + 1 == num_batches
-        sensitivities = grads_list * (self.std_params**2)
+        sensitivities = grads_list * (self.std_params ** 2)
         tot_var = torch.sum(sensitivities)
         cumilative_sum = torch.cumsum(torch.sort(sensitivities, descending=True)[0], 0)
         return sensitivities, torch.sum(cumilative_sum / tot_var <= var_threshold)
@@ -127,24 +112,24 @@ class VIHMCTrainer:
             for jac in jacobian_output_to_params.values():
                 grads.append(
                     torch.mean(
-                        jac**2,
+                        jac ** 2,
                         dim=tuple(range(x[0].ndim)),
                     ).flatten()
                 )
         return torch.cat(grads)
 
     def define_model_log_prob(
-        self,
-        model_loss,
-        tr_data,
-        params_flattened_list,
-        params_shape_list,
-        prior_list,
-        tau_out,
-        load_prior=False,
-        predict=False,
-        prior_scale=1.0,
-        device="cpu",
+            self,
+            model_loss,
+            tr_data,
+            params_flattened_list,
+            params_shape_list,
+            prior_list,
+            tau_out,
+            load_prior=False,
+            predict=False,
+            prior_scale=1.0,
+            device="cpu",
     ):
         """
         This function is built on Hamiltorch, and it defines the `log_prob_func` for torch nn.Modules. This will then be passed into the hamiltorch sampler. This is an important
@@ -193,7 +178,7 @@ class VIHMCTrainer:
         else:
             for tau in prior_list:
                 dist_list.append(
-                    torch.distributions.Normal(torch.zeros_like(tau), tau**0.5)
+                    torch.distributions.Normal(torch.zeros_like(tau), tau ** 0.5)
                 )
 
         if model_loss == "NLL":
@@ -211,13 +196,13 @@ class VIHMCTrainer:
             else:
                 i_prev = 0
                 for weights, index, shape, dist in zip(
-                    self.model.parameters(),
-                    params_flattened_list,
-                    params_shape_list,
-                    dist_list,
+                        self.model.parameters(),
+                        params_flattened_list,
+                        params_shape_list,
+                        dist_list,
                 ):
                     # weights.data = params[i_prev:index+i_prev].reshape(shape)
-                    w = params[i_prev : index + i_prev]
+                    w = params[i_prev: index + i_prev]
                     l_prior = dist.log_prob(w).sum() + l_prior
                     i_prev += index
 
@@ -278,12 +263,12 @@ class VIHMCTrainer:
         return log_prob_func
 
     def predict_model(
-        self,
-        samples,
-        test_loader=None,
-        model_loss="multi_class_linear_output",
-        tau_out=1.0,
-        prior_list=None,
+            self,
+            samples,
+            test_loader=None,
+            model_loss="multi_class_linear_output",
+            tau_out=1.0,
+            prior_list=None,
     ):
         """This function is taken from the Hamiltorch library and modified for DeepONets as necessary. Function used to make predictions given model samples. Note that either a data loader can be passed in, or two tensors (x,y) but make sure
         not to pass in both.
@@ -354,30 +339,88 @@ class VIHMCTrainer:
         return torch.stack(pred_list), pred_log_prob_list
 
     def run(
-        self,
-        train_data: torch.utils.data.DataLoader,
-        valid_data: torch.utils.data.DataLoader,
-        variance_threshold: float = 0.9,
-        num_samples: int = 1000,
-        step_length: int = 30,
-        step_size: float = 1e-4,
-        burn: int = 100,
-        loss: str = "NLL",
-        tau_out: float = 1.0,
-        prior_var: float = 1.0,
-        load_prior: bool = False,
-        init_prior: bool = False,
-        sample_prior: bool = False,
-        prior_file: str = None,
-        device: str = "cpu",
-        debug: bool = False,
+            self,
+            train_data: torch.utils.data.DataLoader,
+            valid_data: torch.utils.data.DataLoader,
+            variance_threshold: float = 0.9,
+            num_samples: int = 1000,
+            num_steps: int = 30,
+            step_size: float = 1e-4,
+            burn: int = 100,
+            loss: str = "NLL",
+            tau_out: float = 1.0,
+            prior_var: float = 1.0,
+            load_prior: bool = False,
+            init_prior: bool = False,
+            sample_prior: bool = False,
+            prior_file: str = None,
+            device: str = "cpu",
+            debug: bool = False,
     ):
+        """
+        run the VI-HMC algorithm to sample from the posterior distribution of parameters.
+        Parameters
+        ----------
+        train_data : torch.Dataloader
+            Data used to compute the log likelihood in HMC
+        valid_data : torch.Dataloader
+            Data used to validate the model performance
+        variance_threshold : float
+            Threshold to define the captured variance in VI-HMC algorithm. This threshold determines
+            the number of sensitive parameters.
+        num_samples : int
+            Number of samples to draw using the VI-HMC method
+        num_steps : float
+            Number of steps to take per trajectory
+        step_size : float
+            Size of each step taken in the numerical integration
+        burn : int
+            Number of samples to burn before collecting samples.
+        loss : {'binary_class_linear_output', 'multi_class_linear_output', 'multi_class_log_softmax_output',
+                'regression', 'NLL'} or function
+            This determines the likelihood to be used for the model. The options correspond to:
+            * 'binary_class_linear_output': model has linear output and using binary cross entropy,
+            * 'multi_class_linear_output': model has linear output and using cross entropy,
+            * 'multi_class_log_softmax_output': model has log softmax output and using cross entropy,
+            * 'regression': model has linear output and using Gaussian likelihood (variance fixed),
+            * 'NLL': Guassian negative log likelihood (variance learnt),
+            * function: function of the form func(y_pred, y_true). It should return a vector (N,), where N is the number
+                of data points.
+        tau_out : float
+            Only relevant for model_loss = 'regression' or 'NLL' (otherwise leave as 1.0). This corresponds the likelihood
+            output precision. 1/variance of likelihood if Regression or variance of likelihood if NLL.
+        prior_var : float
+            variance of the prior distribution
+        load_prior : bool
+            If true load the prior distribution from saved file
+        init_prior : bool
+            If true initialize the HMC chain using the prior information
+        sample_prior : bool
+            If true initialize the HMC chains at samples taken from the prior distribution. If false initialize the HMC
+            chains at the mean of the prior distribution. ``init_prior`` should be true for ``sample_prior`` to take
+            effect.
+        prior_file : str
+            Location of the prior file
+        device : name of device, or {'gpu', 'cpu'}
+            The device to run on
+        debug : bool
+            If True HMC runs in the debug mode.
+
+        Returns
+        -------
+        params_hmc: list of torch.Tensor(s)
+            List of parameters samples for the sensitive parameters
+        pred_list: list
+            List of predictions for the validation data for each of the samples
+        log_prob_list: list
+            List of log probability values for each sample.
+        """
         sensitivity_scores, num_params = self.eval_sensitivity(
             valid_data, var_threshold=variance_threshold
         )
         self.sens_indices = torch.argsort(sensitivity_scores, descending=True)[
-            :num_params
-        ].sort()[0]
+                            :num_params
+                            ].sort()[0]
         print("=============================================================")
         print("Sensitivity analysis results")
         print("-------------------------------------------------------------")
@@ -434,7 +477,7 @@ class VIHMCTrainer:
             log_prob_func,
             params_init,
             num_samples=num_samples,
-            num_steps_per_sample=step_length,
+            num_steps_per_sample=num_steps,
             step_size=step_size,
             debug=debug,
             sampler=samplers.Sampler.HMC,
