@@ -4,6 +4,7 @@ from beartype import beartype
 import torch.nn as nn
 from hamiltorch import samplers
 from torch.func import jacrev, functional_call
+import logging
 
 
 @beartype
@@ -14,19 +15,29 @@ class VIHMCTrainer:
             vi_model: nn.Module,
     ):
         """
-        Prepare to train a Bayesian neural network using hybrid VI-HMC approach
-        Parameters
-        ----------
-        det_model : torch.nn.Module
-            A deterministic model with the same architecture as the Bayesian model
-        vi_model : torch.nn.Module
-            Bayesian model trained with variational inference
+        Prepare to train a Bayesian neural network using the hybrid VI–HMC approach.
+
+        :param det_model: A deterministic model with the same architecture as the Bayesian model.
+        :type det_model: torch.nn.Module
+
+        :param vi_model: Bayesian model trained using variational inference.
+        :type vi_model: torch.nn.Module
         """
+
         self.model = det_model
         self.params_init = util.flatten(self.model).clone()
         self.vi_model = vi_model
         self.mean_params, self.std_params = self._flatten_mean_std()
         self.sens_indices = None
+        self.history: dict = {
+            "vihmc_params": torch.inf,
+            "total_params": torch.inf,
+        }
+        """Record of the parameter numbers. 
+        - ``history["vihmc_params"]`` number of sensitive parameters sampled in the HMC step ``int``.
+        - ``history["total_params"]`` total number of parameters in the model ``int``.
+         """
+        self.logger = logging.getLogger(__name__)
 
     def _flatten_mean_std(self):
         mean_params = []
@@ -40,17 +51,16 @@ class VIHMCTrainer:
 
     def eval_sensitivity(self, valid_data, var_threshold):
         """
-        Function to evaluate sensitivity scores
-        Parameters
-        ----------
-        valid_data : torch.DataLoader
-            Data to compute sensitivity scores
-        var_threshold: float
-            Threshold for the captured variance
-        Returns
-        -------
-        numpy.typing.NDArray
-            Sensitivity scores of the parameters
+        Function to evaluate sensitivity scores.
+
+        :param valid_data: Dataset used to compute sensitivity scores.
+        :type valid_data: torch.DataLoader
+
+        :param var_threshold: Threshold for the captured variance.
+        :type var_threshold: float
+
+        :returns: Sensitivity scores of the parameters.
+        :rtype: numpy.typing.NDArray
         """
         params_unflattened = util.unflatten(self.model, self.mean_params)
         cnt = 0
@@ -70,34 +80,29 @@ class VIHMCTrainer:
 
     def functional_model(self, w, inputs):
         """
-        Functional call of the model
-        Parameters
-        ----------
-        w : list
-            parameters of the model
-        inputs : torch.Tensor
-            input data to evaluate the model
+        Functional call of the model.
 
-        Returns
-        -------
-        torch.Tensor
-            predictions for the given inputs
+        :param w: List of model parameters.
+        :type w: list
 
+        :param inputs: Input data on which the model is evaluated.
+        :type inputs: torch.Tensor
+
+        :returns: Predictions for the given inputs.
+        :rtype: torch.Tensor
         """
+
         return functional_call(self.model, w, tuple(inputs))
 
     def eval_jac(self, x):
         """
-        Function to evaluate the gradients to compute sensitivity scores
-        Parameters
-        ----------
-        x : torch.Tensor
-            input to the network
+        Function to evaluate gradients for computing sensitivity scores.
 
-        Returns
-        -------
-        torch.Tensor
-            Mean of the square of gradients for various inputs
+        :param x: Input tensor to the network.
+        :type x: torch.Tensor
+
+        :returns: Mean of the squared gradients over the inputs.
+        :rtype: torch.Tensor
         """
 
         params_unflattened = util.unflatten(self.model, self.mean_params)
@@ -132,42 +137,60 @@ class VIHMCTrainer:
             device="cpu",
     ):
         """
-        This function is built on Hamiltorch, and it defines the `log_prob_func` for torch nn.Modules. This will then be passed into the hamiltorch sampler. This is an important
-        function for any work with Bayesian neural networks.
-        Parameters
-        ----------
-        model_loss :{'binary_class_linear_output', 'multi_class_linear_output', 'multi_class_log_softmax_output', 'regression', 'NLL'} or function
-            This determines the likelihood to be used for the model. The options correspond to:
-            * 'binary_class_linear_output': model has linear output and using binary cross entropy,
-            * 'multi_class_linear_output': model has linear output and using cross entropy,
-            * 'multi_class_log_softmax_output': model has log softmax output and using cross entropy,
-            * 'regression': model has linear output and using Gaussian likelihood (variance fixed),
-            * 'NLL': Guassian negative log likelihood (variance learnt),
-            * function: function of the form func(y_pred, y_true). It should return a vector (N,), where N is the number of data points.
-        tr_data : torch.DataLoader
-            Training data
-        params_flattened_list : list
-            A list containing the total number of parameters (weights/biases) per layer in order of the model.
-            E.g. `[weights.nelement() for weights in model.parameters()]`.
-        params_shape_list : list
-            A list describing the shape of each set of parameters in the model.
-            E.g. `[weights.shape for weights in model.parameters()]`.
-        prior_list : list
-            A list containing the corresponding prior precision for each set of per layer parameters. This is assuming a Gaussian prior.
-        tau_out : float
-            Only relevant for model_loss = 'regression' or 'NLL' (otherwise leave as 1.0). This corresponds the likelihood output precision.
-        load_prior : bool
-            If true load the prior distribution from saved file
-        predict : bool
-            Flag to set equal to `True` when used as part of `hamiltorch.predict_model`, otherwise set to False. This controls the number of objects
-            to return.
-        prior_scale : float
-            Most relevant for splitting (otherwise leave as 1.0). The prior is divided by this value.
-        device :
+        This function is built on Hamiltorch and defines the ``log_prob_func`` for ``torch.nn.Module``
+        models. The resulting function is passed to the Hamiltorch sampler. This is a core component
+        in workflows involving Bayesian neural networks.
 
-        Returns
-        -------
+        :param model_loss: Determines the likelihood model used. Options include:
 
+                           * ``'binary_class_linear_output'`` – linear output + binary cross entropy
+                           * ``'multi_class_linear_output'`` – linear output + cross entropy
+                           * ``'multi_class_log_softmax_output'`` – log-softmax output + cross entropy
+                           * ``'regression'`` – linear output + Gaussian likelihood (fixed variance)
+                           * ``'NLL'`` – Gaussian negative log likelihood (learned variance)
+                           * **function** – callable of the form ``func(y_pred, y_true)`` returning a
+                             vector of shape ``(N,)``
+
+        :type model_loss: str or function
+
+        :param tr_data: Training dataset used to evaluate the log likelihood.
+        :type tr_data: torch.utils.data.DataLoader
+
+        :param params_flattened_list: A list containing the total number of parameters (weights/biases)
+                                      per layer, in model order.
+                                      Example: ``[w.nelement() for w in model.parameters()]``.
+        :type params_flattened_list: list
+
+        :param params_shape_list: A list describing the shape of each parameter tensor in the model.
+                                  Example: ``[w.shape for w in model.parameters()]``.
+        :type params_shape_list: list
+
+        :param prior_list: List containing the prior precision for each layer’s parameters, assuming
+                           a Gaussian prior.
+        :type prior_list: list
+
+        :param tau_out: Likelihood output precision. Relevant only when
+                        ``model_loss`` is ``'regression'`` or ``'NLL'``.
+                        Leave as ``1.0`` otherwise.
+        :type tau_out: float
+
+        :param load_prior: If True, load the prior distribution from a saved file.
+        :type load_prior: bool
+
+        :param predict: Set to True when invoked as part of ``hamiltorch.predict_model``.
+                        Controls the number of returned objects.
+        :type predict: bool
+
+        :param prior_scale: Scaling factor applied to the prior (primarily relevant for splitting).
+                            Default is ``1.0``.
+        :type prior_scale: float
+
+        :param device: Device on which computations are performed (e.g., ``'cpu'``, ``'gpu'``).
+        :type device: str
+
+
+        :returns: function to compute the log probabilities
+        :rtype: function
         """
 
         dist_list = []
@@ -270,36 +293,47 @@ class VIHMCTrainer:
             tau_out=1.0,
             prior_list=None,
     ):
-        """This function is taken from the Hamiltorch library and modified for DeepONets as necessary. Function used to make predictions given model samples. Note that either a data loader can be passed in, or two tensors (x,y) but make sure
-        not to pass in both.
-
-        Parameters
-        ----------
-        samples : list of torch.Tensor
-            A list, where each element is a torch.Tensor of shape (D,), where D is the number of parameters of the model.
-            The length of the list is given by the number of samples, S.
-        test_loader : torch.utils.data.Dataloader, optional
-            Data loader to be used for evaluating the samples. This can be set to `None` if `x` and `y` are defined.
-        model_loss : {'binary_class_linear_output', 'multi_class_linear_output', 'multi_class_log_softmax_output', 'regression'} or function
-            This determines the likelihood to be used for the model. The options correspond to:
-            * 'binary_class_linear_output': model has linear output and using binary cross entropy,
-            * 'multi_class_linear_output': model has linear output and using cross entropy,
-            * 'multi_class_log_softmax_output': model has log softmax output and using cross entropy,
-            * 'regression': model has linear output and using Gaussian likelihood,
-            * function: function of the form func(y_pred, y_true). It should return a vector (N,), where N is the number of data points.
-        tau_out : float
-            Only relevant for model_loss = 'regression' (otherwise leave as 1.0). This corresponds the likelihood output precision.
-        prior_list : torch.Tensor
-            A tensor containing the corresponding prior precision for each set of per layer parameters. This is assuming a Gaussian prior.
-
-        Returns
-        -------
-        predictions : torch.tensor
-            Output of the model of shape (S,N,O), where S is the number of samples, N is the number of data points, and O is the output shape of the model.
-        pred_log_prob_list : list
-            List of log probability values for each sample. The length of the list is S.
-
         """
+        This function is adapted from the Hamiltorch library and modified for DeepONets as needed.
+        It produces predictions given model parameter samples. Either a dataloader **or** two tensors
+        ``x`` and ``y`` may be passed—but not both.
+
+        :param samples: A list where each element is a ``torch.Tensor`` of shape ``(D,)`` containing a
+                        full parameter vector for the model. The list length ``S`` equals the number
+                        of parameter samples.
+        :type samples: list[torch.Tensor]
+
+        :param test_loader: Data loader used to evaluate the samples. May be ``None`` if ``x`` and ``y``
+                            are provided separately.
+        :type test_loader: torch.utils.data.Dataloader or None
+
+        :param model_loss: Determines the likelihood model used. Options include:
+
+                           * ``'binary_class_linear_output'`` – linear output + binary cross entropy
+                           * ``'multi_class_linear_output'`` – linear output + cross entropy
+                           * ``'multi_class_log_softmax_output'`` – log-softmax output + cross entropy
+                           * ``'regression'`` – linear output + Gaussian likelihood
+                           * **function** – a callable ``func(y_pred, y_true)`` returning a vector of
+                             shape ``(N,)``
+
+        :type model_loss: str or function
+
+        :param tau_out: Likelihood output precision. Relevant only when ``model_loss='regression'``.
+                        Leave as ``1.0`` otherwise.
+        :type tau_out: float
+
+        :param prior_list: Tensor containing the prior precision for each layer’s parameters,
+                           assuming a Gaussian prior.
+        :type prior_list: torch.Tensor
+
+
+        :returns:
+            - **predictions** (``torch.Tensor``) – Model outputs of shape ``(S, N, O)``, where
+              ``S`` is the number of samples, ``N`` is the number of data points, and ``O`` is the model output dimension.
+            - **pred_log_prob_list** (``list``) – Log-probability values for each sample; list length is ``S``.
+        :rtype: tuple
+        """
+
         with torch.no_grad():
             params_shape_list = []
             params_flattened_list = []
@@ -358,77 +392,113 @@ class VIHMCTrainer:
             debug: bool = False,
     ):
         """
-        run the VI-HMC algorithm to sample from the posterior distribution of parameters.
-        Parameters
-        ----------
-        train_data : torch.Dataloader
-            Data used to compute the log likelihood in HMC
-        valid_data : torch.Dataloader
-            Data used to validate the model performance
-        variance_threshold : float
-            Threshold to define the captured variance in VI-HMC algorithm. This threshold determines
-            the number of sensitive parameters.
-        num_samples : int
-            Number of samples to draw using the VI-HMC method
-        num_steps : float
-            Number of steps to take per trajectory
-        step_size : float
-            Size of each step taken in the numerical integration
-        burn : int
-            Number of samples to burn before collecting samples.
-        loss : {'binary_class_linear_output', 'multi_class_linear_output', 'multi_class_log_softmax_output',
-                'regression', 'NLL'} or function
-            This determines the likelihood to be used for the model. The options correspond to:
-            * 'binary_class_linear_output': model has linear output and using binary cross entropy,
-            * 'multi_class_linear_output': model has linear output and using cross entropy,
-            * 'multi_class_log_softmax_output': model has log softmax output and using cross entropy,
-            * 'regression': model has linear output and using Gaussian likelihood (variance fixed),
-            * 'NLL': Guassian negative log likelihood (variance learnt),
-            * function: function of the form func(y_pred, y_true). It should return a vector (N,), where N is the number
-                of data points.
-        tau_out : float
-            Only relevant for model_loss = 'regression' or 'NLL' (otherwise leave as 1.0). This corresponds the likelihood
-            output precision. 1/variance of likelihood if Regression or variance of likelihood if NLL.
-        prior_var : float
-            variance of the prior distribution
-        load_prior : bool
-            If true load the prior distribution from saved file
-        init_prior : bool
-            If true initialize the HMC chain using the prior information
-        sample_prior : bool
-            If true initialize the HMC chains at samples taken from the prior distribution. If false initialize the HMC
-            chains at the mean of the prior distribution. ``init_prior`` should be true for ``sample_prior`` to take
-            effect.
-        prior_file : str
-            Location of the prior file
-        device : name of device, or {'gpu', 'cpu'}
-            The device to run on
-        debug : bool
-            If True HMC runs in the debug mode.
+        Run the VI-HMC algorithm to sample from the posterior distribution of parameters.
 
-        Returns
-        -------
-        params_hmc: list of torch.Tensor(s)
-            List of parameters samples for the sensitive parameters
-        pred_list: list
-            List of predictions for the validation data for each of the samples
-        log_prob_list: list
-            List of log probability values for each sample.
+        :param train_data: Data used to compute the log-likelihood in HMC.
+        :type train_data: torch.Dataloader
+
+        :param valid_data: Data used to validate model performance.
+        :type valid_data: torch.Dataloader
+
+        :param variance_threshold: Threshold defining the captured variance in the VI-HMC algorithm.
+                                   This threshold determines the number of sensitive parameters.
+        :type variance_threshold: float
+
+        :param num_samples: Number of samples to draw using the VI-HMC method.
+        :type num_samples: int
+
+        :param num_steps: Number of steps to take per trajectory.
+        :type num_steps: float
+
+        :param step_size: Size of each step taken in the numerical integration.
+        :type step_size: float
+
+        :param burn: Number of samples to discard (burn-in) before collecting samples.
+        :type burn: int
+
+        :param loss: Determines the likelihood used for the model. Options include:
+                     ``'binary_class_linear_output'``, ``'multi_class_linear_output'``,
+                     ``'multi_class_log_softmax_output'``, ``'regression'``, ``'NLL'``,
+                     or a custom function ``func(y_pred, y_true)`` returning a vector of shape (N,).
+                     The options correspond to:
+
+                     * ``'binary_class_linear_output'``: linear output + binary cross entropy.
+                     * ``'multi_class_linear_output'``: linear output + cross entropy.
+                     * ``'multi_class_log_softmax_output'``: log-softmax output + cross entropy.
+                     * ``'regression'``: linear output + Gaussian likelihood (fixed variance).
+                     * ``'NLL'``: Gaussian negative log-likelihood (learned variance).
+        :type loss: str or function
+
+        :param tau_out: Likelihood output precision. Relevant only when ``loss`` is
+                        ``'regression'`` or ``'NLL'``. Interpreted as ``1/variance`` for regression
+                        or as the variance for NLL. Default is ``1.0``.
+        :type tau_out: float
+
+        :param prior_var: Variance of the prior distribution.
+        :type prior_var: float
+
+        :param load_prior: If True, load the prior distribution from a saved file.
+        :type load_prior: bool
+
+        :param init_prior: If True, initialize the HMC chain using prior information.
+        :type init_prior: bool
+
+        :param sample_prior: If True, initialize HMC chains at samples drawn from the prior.
+                             If False, initialize chains at the prior mean.
+                             ``init_prior`` must be True for ``sample_prior`` to take effect.
+        :type sample_prior: bool
+
+        :param prior_file: Location of the prior file.
+        :type prior_file: str
+
+        :param device: Device to run the algorithm on (e.g., ``'cpu'`` or ``'gpu'``).
+        :type device: str
+
+        :param debug: If True, run HMC in debug mode.
+        :type debug: bool
+
+
+        :returns:
+            - **params_hmc** (*list[torch.Tensor]*) – Parameter samples for the sensitive parameters.
+            - **pred_list** (*list*) – Predictions for the validation data for each sample.
+            - **log_prob_list** (*list*) – Log-probability values for each sample.
+        :rtype: tuple
         """
+        self.logger.info(
+            "============================================================="
+        )
+        self.logger.info(
+            "UQpy: Scientific Machine Learning: Performing sensitivity analysis "
+        )
         sensitivity_scores, num_params = self.eval_sensitivity(
             valid_data, var_threshold=variance_threshold
         )
         self.sens_indices = torch.argsort(sensitivity_scores, descending=True)[
                             :num_params
                             ].sort()[0]
-        print("=============================================================")
-        print("Sensitivity analysis results")
-        print("-------------------------------------------------------------")
-        print("No of total parameters: ", len(self.mean_params))
-        print("No of sensitive parameters: ", num_params.detach().numpy())
-        print("=============================================================")
-        print("VI-HMC results")
-        print("-------------------------------------------------------------")
+        self.history["vihmc_params"] = num_params.detach().numpy()
+        self.history["total_params"] = len(self.mean_params)
+        self.logger.info(
+            "UQpy: Scientific Machine Learning: Sensitivity analysis results"
+        )
+        self.logger.info(
+            "-------------------------------------------------------------"
+        )
+        self.logger.info(
+            f"UQpy: Scientific Machine Learning: No of total parameters: {len(self.mean_params)}"
+        )
+        self.logger.info(
+            f"UQpy: Scientific Machine Learning: No of sensitive parameters: {num_params.detach().numpy()}"
+        )
+        self.logger.info(
+            "============================================================="
+        )
+        self.logger.info(
+            "UQpy: Scientific Machine Learning: Performing HMC on the reduced parameters space "
+        )
+        self.logger.info(
+            "-------------------------------------------------------------"
+        )
         params_shape_list = []
         params_flattened_list = []
         prior_list = []
@@ -488,5 +558,8 @@ class VIHMCTrainer:
             model_loss=loss,
             tau_out=tau_out,
             prior_list=prior_list,
+        )
+        self.logger.info(
+            "UQpy: Scientific Machine Learning: Completed VI-HMC "
         )
         return params_hmc, pred_list, log_prob_list

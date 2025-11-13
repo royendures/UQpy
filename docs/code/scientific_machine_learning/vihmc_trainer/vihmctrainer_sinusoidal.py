@@ -20,7 +20,8 @@ import math
 import logging
 
 torch.manual_seed(123)
-
+logger = logging.getLogger("UQpy")  # Optional, display UQpy logs to console
+logger.setLevel(logging.INFO)
 
 # %% md
 # VI training
