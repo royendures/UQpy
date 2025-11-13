@@ -1,8 +1,14 @@
 """
 Training a Bayesian neural network with VI-HMC
 =============================================================
-
+In this example we train a Bayesian neural network to learn the function :math:`f(x)= 4 sin(4x) + 5 cos(12x)` using VI-HMC
 """
+
+# %% md
+#
+# First, we have to import the necessary modules.
+
+# %%
 
 import torch
 import torch.nn as nn
@@ -13,16 +19,26 @@ import torch.nn.functional as F
 import math
 import logging
 
-# logger = logging.getLogger("UQpy")  # Optional, display UQpy logs to console
-# logger.setLevel(logging.INFO)
 torch.manual_seed(123)
 
-"""
-VI training
-=============================================================
-"""
 
+# %% md
+# VI training
+# =============================================================
+# The first step is to train the Bayesian neural network using VI
 
+# %%
+
+# %% md
+#
+# We first define our training data.
+# We want to learn the function :math:`f(x)= 4 sin(4x) + 5 cos(12x)` and define the training data using the
+# pytorch Dataset and Dataloader.
+#
+# For more information on defining the training data,
+# see the pytorch documentation at https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
+
+# %%
 class SinusoidalDataset(Dataset):
     def __init__(self, n_samples=300, noise=1e-3, train=True):
         self.n_samples = n_samples
@@ -51,6 +67,17 @@ class SinusoidalDataset(Dataset):
         return self.x[item], self.y[item]
 
 
+data_noise = 5e-2
+train_dataset = SinusoidalDataset(n_samples=20, noise=data_noise)
+test_dataset = SinusoidalDataset(n_samples=300, noise=0.0, train=False)
+
+
+# %% md
+#
+# Next we define the Gaussian negative log likelihood loss function with a fixed variance of the noise
+
+# %%
+
 class GaussianNLLLoss(nn.Module):
     def __init__(self, var, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -65,12 +92,73 @@ class GaussianNLLLoss(nn.Module):
         )
 
 
-def post_process_vi():
-    # %% md
-    #
-    # We compare the initial and final predictions and plot the loss history using matplotlib.
+# %% md
+#
+# We define the network architecture using the ``nn.Sequential`` object
+# and instantiate the ``BayesianNeuralNetwork``.
 
-    # %%
+# %%
+
+prior_sigma = 1.0
+width = 10
+network = nn.Sequential(
+    sml.BayesianLinear(1, width, prior_sigma=prior_sigma, posterior_rho_initial=(0.2351, 0.1)),
+    nn.Tanh(),
+    sml.BayesianLinear(width, width, prior_sigma=prior_sigma, posterior_rho_initial=(0.2351, 0.1)),
+    nn.Tanh(),
+    sml.BayesianLinear(width, 1, prior_sigma=prior_sigma, posterior_rho_initial=(0.2351, 0.1)),
+)
+model = sml.FeedForwardNeuralNetwork(network)
+
+# %% md
+#
+# Before we continue with training the network, let's get the initial prediction of the neural network on the data.
+
+# %%
+initial_prediction = model(train_dataset.x)
+
+# %% md
+#
+# So far we have the neural network and training data. The ``BBBTrainer`` combines the two along with a pytorch
+# optimization algorithm to learn the network parameters using VI. We instantiate the ``BBBTrainer``, train the network,
+# then print the initial and final loss alongside a model summary.
+
+# %%
+
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+train_dataloader = DataLoader(train_dataset, batch_size=40, shuffle=True)
+test_dataloader = DataLoader(test_dataset, batch_size=40, shuffle=False)
+lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5_000, min_lr=1e-5, verbose=True)
+trainer = sml.BBBTrainer(
+    model, optimizer, loss_function=GaussianNLLLoss(var=data_noise ** 2), scheduler=lr_sched)
+print("Starting Training...", end="")
+trainer.run(
+    train_data=train_dataloader,
+    test_data=test_dataloader,
+    epochs=30_000,
+    beta=1 / len(train_dataloader),
+    num_samples=10,
+)
+print("done")
+
+print("Initial loss:", trainer.history["train_loss"][0])
+print("Final loss:", trainer.history["train_loss"][-1])
+model.summary()
+
+
+# %% md
+#
+# Now we post process and plot the results obtained from training the Bayesian network using VI
+
+# %%
+
+def post_process_vi():
+    """
+     This function the initial and final predictions and plot the loss history using matplotlib.
+    Returns
+    -------
+    None
+    """
 
     x = train_dataset.x
     y = train_dataset.y
@@ -109,16 +197,15 @@ def post_process_vi():
 
     plt.show()
 
-    # %% md
-    # The Bayesian neural network is a probabilistic model. Each of its parameters, in this case weights and biases,
-    # are governed by Gaussian distributions. We can get a deterministic output from the BNN by setting
-    # ``model.sample(False)``, which sets each parameter to the mean of its distribution.
-    #
-    # We can obtain error bars on model's output by sampling the parameters from their governing distribution.
-    # This is done by setting ``model.sample(True)`` and computing the forward model evaluation many times,
-    # then computing the sample variance
+    """
+    The Bayesian neural network is a probabilistic model. Each of its parameters, in this case weights and biases,
+    are governed by Gaussian distributions. We can get a deterministic output from the BNN by setting
+    ``model.sample(False)``, which sets each parameter to the mean of its distribution.
 
-    # %%
+    We can obtain error bars on model's output by sampling the parameters from their governing distribution.
+    This is done by setting ``model.sample(True)`` and computing the forward model evaluation many times,
+    then computing the sample variance
+    """
 
     x_test = test_dataset.x
     y_test = test_dataset.y
@@ -161,47 +248,22 @@ def post_process_vi():
     plt.show()
 
 
-prior_sigma = 1.0
-width = 10
-network = nn.Sequential(
-    sml.BayesianLinear(1, width, prior_sigma=prior_sigma, posterior_rho_initial=(0.2351, 0.1)),
-    nn.Tanh(),
-    sml.BayesianLinear(width, width, prior_sigma=prior_sigma, posterior_rho_initial=(0.2351, 0.1)),
-    nn.Tanh(),
-    sml.BayesianLinear(width, 1, prior_sigma=prior_sigma, posterior_rho_initial=(0.2351, 0.1)),
-)
-model = sml.FeedForwardNeuralNetwork(network)
-
-data_noise = 5e-2
-train_dataset = SinusoidalDataset(n_samples=20, noise=data_noise)
-test_dataset = SinusoidalDataset(n_samples=300, noise=0.0, train=False)
-initial_prediction = model(train_dataset.x)
-
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
-train_dataloader = DataLoader(train_dataset, batch_size=40, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=40, shuffle=False)
-lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5_000, min_lr=1e-5, verbose=True)
-trainer = sml.BBBTrainer(
-    model, optimizer, loss_function=GaussianNLLLoss(var=data_noise ** 2), scheduler=lr_sched)
-print("Starting Training...", end="")
-trainer.run(
-    train_data=train_dataloader,
-    test_data=test_dataloader,
-    epochs=30_000,
-    beta=1 / len(train_dataloader),
-    num_samples=10,
-)
-print("done")
-
-print("Initial loss:", trainer.history["train_loss"][0])
-print("Final loss:", trainer.history["train_loss"][-1])
-model.summary()
 post_process_vi()
 
-"""
-VI-HMC sampling
-=============================================================
-"""
+# %% md
+# VI-HMC sampling
+# =============================================================
+# In this section, we compute the sensitivities of the network parameters to quantify uncertainties and learn the most
+# sensitive parameters using HMC.
+
+# %%
+
+# %% md
+#
+# We define a deterministic network architecture same as the Bayesian network to compute sensitivities
+
+# %%
+
 det_network = nn.Sequential(
     nn.Linear(1, width),
     nn.Tanh(),
@@ -210,12 +272,25 @@ det_network = nn.Sequential(
     nn.Linear(width, 1),
 )
 
+# %% md
+#
+# We evaluate the mean of the parameters from the parameter distributions learned using VI
+
+# %%
+
+
 mean_params = []
 for name, param in model.named_parameters():
     if "mu" in name:
         mean_params.append(param.flatten())
 
 mean_params = torch.cat(mean_params)
+
+# %% md
+#
+# We define the necessary parameters to run HMC
+
+# %%
 
 # HMC Params
 step_size = 2e-4
@@ -228,6 +303,13 @@ tau_out = (
         data_noise ** 2
 )  # Measure of precision: 1/variance if Regression or variance if NLL
 
+# %% md
+#
+# Finally the ``VIHMCTrainer`` samples the posterior distribution of parameters using HMC. This trainer uses the
+# information from VI learned distributions to reduce the dimensions of the parameter space to run the HMC.
+
+# %%
+
 vihmc_trainer = sml.VIHMCTrainer(det_model=det_network, vi_model=model)
 params_hmc, pred_list, _ = vihmc_trainer.run(
     train_data=train_dataloader,
@@ -237,11 +319,17 @@ params_hmc, pred_list, _ = vihmc_trainer.run(
     num_samples=num_samples,
     burn=burn,
     prior_var=prior_sigma ** 2,
-    step_length=L,
+    num_steps=L,
     tau_out=tau_out,
     debug=False,
 )
 
+
+# %% md
+#
+# We post process and plot the results obtained from training the Bayesian network using VI_HMC
+
+# %%
 
 def post_process_vihmc():
     x = []

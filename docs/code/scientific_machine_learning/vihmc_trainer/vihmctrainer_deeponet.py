@@ -1,3 +1,14 @@
+"""
+Training a Bayesian operator network with VI-HMC
+=============================================================
+In this example we train a Bayesian operator network to learn the Burger's equation using VI-HMC
+"""
+
+# %% md
+#
+# First, we have to import the necessary modules.
+
+# %%
 import torch
 import torch.nn as nn
 import numpy as np
@@ -13,6 +24,23 @@ logger = logging.getLogger("UQpy")  # Optional, display UQpy logs to console
 logger.setLevel(logging.INFO)
 
 
+# %% md
+# VI training
+# =============================================================
+# The first step is to train the Bayesian neural network using VI
+
+# %%
+
+# %% md
+#
+# We first define our training data for the DeepOperator network.
+# We want to learn the solution of the Burger's equation and define the training data using the
+# pytorch Dataset and Dataloader.
+#
+# For more information on defining the training data,
+# see the pytorch documentation at https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
+
+# %%
 def get_data(N_train, N_valid, batch_size, p=10201):
     class BurgersDataSet(Dataset):
         """Load the Burgers dataset"""
@@ -52,6 +80,11 @@ train_dataset, test_dataset = get_data(N_train=10, N_valid=10, batch_size=128, p
 data_noise = 1.0
 
 
+# %% md
+#
+# Next we define a class to apply the necessary boundary conditions for the Burger's equation
+
+# %%
 class Apply_BC(nn.Module):
     def __init__(self):
         super(Apply_BC, self).__init__()
@@ -69,6 +102,13 @@ class Apply_BC(nn.Module):
         return torch.cat([x[:, :, 0].unsqueeze(dim=2), x_bc], dim=2)
 
 
+# %% md
+#
+# We then define the function to build a neural network. This function will be used to build the trunk and the branch
+# networks of the DeepONet.
+
+# %%
+
 def build_nn(input_dim, output_dim, width, depth, is_bayesian, apply_bc):
     layer = sml.BayesianLinear if is_bayesian else nn.Linear
     modules = [Apply_BC()] if apply_bc else []
@@ -81,6 +121,12 @@ def build_nn(input_dim, output_dim, width, depth, is_bayesian, apply_bc):
     network = nn.Sequential(*modules)
     return network
 
+
+# %% md
+#
+# Next we define the Gaussian negative log likelihood loss function with a fixed variance of the noise
+
+# %%
 
 class GaussianNLLLoss(nn.Module):
     def __init__(self, var, *args, **kwargs):
@@ -96,6 +142,13 @@ class GaussianNLLLoss(nn.Module):
         )
 
 
+# %% md
+#
+# We now build the branch and trunk networks and pass them to the ``DeepOperatorNetwork`` class to construct our
+# DeepOnet
+
+# %%
+
 branch_net = build_nn(
     input_dim=101, output_dim=100, width=100, depth=9, is_bayesian=True, apply_bc=False
 )
@@ -104,6 +157,15 @@ trunk_net = build_nn(
 )
 model = sml.DeepOperatorNetwork(branch_network=branch_net, trunk_network=trunk_net)
 
+# %% md
+#
+# So far we have the operator network and training data. The ``BBBTrainer`` combines the two along with a pytorch
+# optimization algorithm to learn the network parameters using VI. We instantiate the ``BBBTrainer`` and train the
+# network.
+
+# %%
+
+# %%
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 trainer = sml.BBBTrainer(model, optimizer, loss_function=GaussianNLLLoss(var=data_noise ** 2))
 trainer.run(train_data=train_dataset, test_data=test_dataset, epochs=10)
@@ -114,6 +176,11 @@ det_trunk_net = build_nn(
 )
 det_model = sml.DeepOperatorNetwork(branch_network=det_branch_net, trunk_network=det_trunk_net)
 
+# %% md
+#
+# We define the necessary parameters to run HMC
+
+# %%
 # HMC Params
 step_size = 2e-4
 num_samples = 10
@@ -126,6 +193,13 @@ tau_out = (
 )  # Measure of precision: 1/variance if Regression or variance if NLL
 prior_sigma = 0.1
 
+# %% md
+#
+# Finally the ``VIHMCTrainer`` samples the posterior distribution of parameters using HMC. This trainer uses the
+# information from VI learned distributions to reduce the dimensions of the parameter space to run the HMC.
+
+# %%
+
 vihmc_trainer = sml.VIHMCTrainer(det_model=det_model, vi_model=model)
 params_hmc, pred_list, _ = vihmc_trainer.run(
     train_data=train_dataset,
@@ -135,7 +209,7 @@ params_hmc, pred_list, _ = vihmc_trainer.run(
     num_samples=num_samples,
     burn=burn,
     prior_var=prior_sigma ** 2,
-    step_length=L,
+    num_steps=L,
     tau_out=tau_out,
     debug=False,
 )
