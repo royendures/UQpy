@@ -1,7 +1,7 @@
 Hybrid Variation Inference-Hamiltonian Monte Carlo Trainers (VIHMCTrainer)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Class to train a neural network using the hybrid VI-HMC :cite:`thiagarajan2025accelerating` method and a Pytorch optimization algorithm.
+Class to train a neural network using the hybrid VI-HMC :cite:`thiagarajan2025accelerating` method.
 
 The :class:`.VIHMCTrainer` class is imported using the following command:
 
