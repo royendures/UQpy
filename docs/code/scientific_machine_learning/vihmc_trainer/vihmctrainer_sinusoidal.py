@@ -23,6 +23,7 @@ torch.manual_seed(123)
 logger = logging.getLogger("UQpy")  # Optional, display UQpy logs to console
 logger.setLevel(logging.INFO)
 
+
 # %% md
 # VI training
 # =============================================================
@@ -234,13 +235,6 @@ def post_process_vi():
         linestyle="dashed",
     )
     ax.plot(x_plot, mu, "k", label="$\mu$", linewidth=3)
-    # ax.fill_between(
-    #     x_plot,
-    #     mu - (3 * sigma),
-    #     mu + (3 * sigma),
-    #     label="$\mu \pm 3\sigma$,",
-    #     alpha=0.3,
-    # )
     ax.plot(x, y.detach().numpy(), ".C3", markersize=30, label="x train", alpha=0.6)
     ax.set_title("Bayesian Neural Network predictions")
     ax.set(xlabel="x", ylabel="f(x)")
