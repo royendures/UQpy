@@ -14,7 +14,7 @@ if len(sys.argv) > 2 and sys.argv[2] in ["develop", "install"]:
 if "UQPY_VERSION" in os.environ:
     version = os.environ["UQPY_VERSION"]
 else:
-    version = "4.0.0"
+    version = "4.2.1"
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.rst").read_text()
