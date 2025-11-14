@@ -380,7 +380,7 @@ class VIHMCTrainer:
             num_samples: int = 1000,
             num_steps: int = 30,
             step_size: float = 1e-4,
-            burn: int = 100,
+            burn: int = 0,
             loss: str = "NLL",
             tau_out: float = 1.0,
             prior_var: float = 1.0,
