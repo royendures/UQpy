@@ -130,7 +130,7 @@ initial_prediction = model(train_dataset.x)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 train_dataloader = DataLoader(train_dataset, batch_size=40, shuffle=True)
 test_dataloader = DataLoader(test_dataset, batch_size=40, shuffle=False)
-lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5_000, min_lr=1e-5, verbose=True)
+lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5_000, min_lr=1e-5)
 trainer = sml.BBBTrainer(
     model, optimizer, loss_function=GaussianNLLLoss(var=data_noise ** 2), scheduler=lr_sched)
 print("Starting Training...", end="")
@@ -288,7 +288,7 @@ mean_params = torch.cat(mean_params)
 # %%
 
 # HMC Params
-step_size = 2e-4
+step_size = 5e-4
 num_samples = 3_000
 burn = num_samples // 5
 post_var = 0.2024 ** 2
@@ -309,7 +309,7 @@ vihmc_trainer = sml.VIHMCTrainer(det_model=det_network, vi_model=model)
 params_hmc, pred_list, _ = vihmc_trainer.run(
     train_data=train_dataloader,
     valid_data=test_dataloader,
-    variance_threshold=0.90,
+    variance_threshold=0.95,
     step_size=step_size,
     num_samples=num_samples,
     burn=burn,
