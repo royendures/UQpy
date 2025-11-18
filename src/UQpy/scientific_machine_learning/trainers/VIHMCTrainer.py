@@ -476,7 +476,7 @@ class VIHMCTrainer:
         self.sens_indices = torch.argsort(sensitivity_scores, descending=True)[
                             :num_params
                             ].sort()[0]
-        self.history["vihmc_params"] = num_params.detach().numpy()
+        self.history["vihmc_params"] = num_params.cpu().detach().numpy()
         self.history["total_params"] = len(self.mean_params)
         self.logger.info(
             "UQpy: Scientific Machine Learning: Sensitivity analysis results"
@@ -488,7 +488,7 @@ class VIHMCTrainer:
             f"UQpy: Scientific Machine Learning: No of total parameters: {len(self.mean_params)}"
         )
         self.logger.info(
-            f"UQpy: Scientific Machine Learning: No of sensitive parameters: {num_params.detach().numpy()}"
+            f"UQpy: Scientific Machine Learning: No of sensitive parameters: {num_params.cpu().detach().numpy()}"
         )
         self.logger.info(
             "============================================================="
