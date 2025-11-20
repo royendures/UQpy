@@ -1,18 +1,22 @@
 import hamiltorch.util as util
+import numpy as np
 import torch
 from beartype import beartype
 import torch.nn as nn
 from hamiltorch import samplers
 from torch.func import jacrev, functional_call
 import logging
+from typing import Callable, List, Union
 
 
 @beartype
 class VIHMCTrainer:
     def __init__(
-            self,
-            det_model: nn.Module,
-            vi_model: nn.Module,
+        self,
+        det_model: nn.Module,
+        vi_model: nn.Module,
+        sensitivity_function: Callable = None,
+        sensitivity_indices: Union[List, np.ndarray, torch.Tensor] = None
     ):
         """
         Prepare to train a Bayesian neural network using the hybrid VI–HMC approach.
@@ -22,13 +26,22 @@ class VIHMCTrainer:
 
         :param vi_model: Bayesian model trained using variational inference.
         :type vi_model: torch.nn.Module
+
+        :param sensitivity_function: `optional` function handle to compute sensitivity of the model. This function
+        takes inputs and weights of the network and predicts output. Uses the functional call of `det_model` by default.
+        :type sensitivity_function: function
+
+        :param sensitivity_indices: `optional` list or array of indices of sensitive parameters. These indices are
+        computed internally by default.
+        :type sensitivity_indices: Union[List, np.ndarray, torch.Tensor]
         """
 
         self.model = det_model
         self.params_init = util.flatten(self.model).clone()
         self.vi_model = vi_model
+        self.sens_fn = sensitivity_function
         self.mean_params, self.std_params = self._flatten_mean_std()
-        self.sens_indices = None
+        self.sens_indices = sensitivity_indices
         self.history: dict = {
             "vihmc_params": torch.inf,
             "total_params": torch.inf,
@@ -73,12 +86,12 @@ class VIHMCTrainer:
             *x, y = batch_data
             grads_list += self.eval_jac(x) / num_batches
         assert i + 1 == num_batches
-        sensitivities = grads_list * (self.std_params ** 2)
+        sensitivities = grads_list * (self.std_params**2)
         tot_var = torch.sum(sensitivities)
         cumilative_sum = torch.cumsum(torch.sort(sensitivities, descending=True)[0], 0)
         return sensitivities, torch.sum(cumilative_sum / tot_var <= var_threshold)
 
-    def functional_model(self, w, inputs):
+    def functional_model(self, w, inputs, is_sens=False):
         """
         Functional call of the model.
 
@@ -88,11 +101,20 @@ class VIHMCTrainer:
         :param inputs: Input data on which the model is evaluated.
         :type inputs: torch.Tensor
 
+        :param is_sens: Function to compute sensitivity if True
+        :type is_sens: bool
+
         :returns: Predictions for the given inputs.
         :rtype: torch.Tensor
         """
-
-        return functional_call(self.model, w, tuple(inputs))
+        if is_sens:
+            return (
+                functional_call(self.model, w, tuple(inputs))
+                if self.sens_fn is None
+                else self.sens_fn(w, tuple(inputs))
+            )
+        else:
+            return functional_call(self.model, w, tuple(inputs))
 
     def eval_jac(self, x):
         """
@@ -111,30 +133,30 @@ class VIHMCTrainer:
 
         with torch.no_grad():  # prevents memory leak
             jacobian_output_to_params = jacrev(self.functional_model, argnums=0)(
-                params_dict, x
+                params_dict, x, True
             )
             grads = []
             for jac in jacobian_output_to_params.values():
                 grads.append(
                     torch.mean(
-                        jac ** 2,
+                        jac**2,
                         dim=tuple(range(x[0].ndim)),
                     ).flatten()
                 )
         return torch.cat(grads)
 
     def define_model_log_prob(
-            self,
-            model_loss,
-            tr_data,
-            params_flattened_list,
-            params_shape_list,
-            prior_list,
-            tau_out,
-            load_prior=False,
-            predict=False,
-            prior_scale=1.0,
-            device="cpu",
+        self,
+        model_loss,
+        tr_data,
+        params_flattened_list,
+        params_shape_list,
+        prior_list,
+        tau_out,
+        load_prior=False,
+        predict=False,
+        prior_scale=1.0,
+        device="cpu",
     ):
         """
         This function is built on Hamiltorch and defines the ``log_prob_func`` for ``torch.nn.Module``
@@ -201,7 +223,7 @@ class VIHMCTrainer:
         else:
             for tau in prior_list:
                 dist_list.append(
-                    torch.distributions.Normal(torch.zeros_like(tau), tau ** 0.5)
+                    torch.distributions.Normal(torch.zeros_like(tau), tau**0.5)
                 )
 
         if model_loss == "NLL":
@@ -219,13 +241,13 @@ class VIHMCTrainer:
             else:
                 i_prev = 0
                 for weights, index, shape, dist in zip(
-                        self.model.parameters(),
-                        params_flattened_list,
-                        params_shape_list,
-                        dist_list,
+                    self.model.parameters(),
+                    params_flattened_list,
+                    params_shape_list,
+                    dist_list,
                 ):
                     # weights.data = params[i_prev:index+i_prev].reshape(shape)
-                    w = params[i_prev: index + i_prev]
+                    w = params[i_prev : index + i_prev]
                     l_prior = dist.log_prob(w).sum() + l_prior
                     i_prev += index
 
@@ -286,12 +308,12 @@ class VIHMCTrainer:
         return log_prob_func
 
     def predict_model(
-            self,
-            samples,
-            test_loader=None,
-            model_loss="multi_class_linear_output",
-            tau_out=1.0,
-            prior_list=None,
+        self,
+        samples,
+        test_loader=None,
+        model_loss="multi_class_linear_output",
+        tau_out=1.0,
+        prior_list=None,
     ):
         """
         This function is adapted from the Hamiltorch library and modified for DeepONets as needed.
@@ -373,23 +395,24 @@ class VIHMCTrainer:
         return torch.stack(pred_list), pred_log_prob_list
 
     def run(
-            self,
-            train_data: torch.utils.data.DataLoader,
-            valid_data: torch.utils.data.DataLoader,
-            variance_threshold: float = 0.9,
-            num_samples: int = 1000,
-            num_steps: int = 30,
-            step_size: float = 1e-4,
-            burn: int = 0,
-            loss: str = "NLL",
-            tau_out: float = 1.0,
-            prior_var: float = 1.0,
-            load_prior: bool = False,
-            init_prior: bool = False,
-            sample_prior: bool = False,
-            prior_file: str = None,
-            device: str = "cpu",
-            debug: bool = False,
+        self,
+        train_data: torch.utils.data.DataLoader,
+        valid_data: torch.utils.data.DataLoader,
+        sens_data: torch.utils.data.DataLoader = None,
+        variance_threshold: float = 0.9,
+        num_samples: int = 1000,
+        num_steps: int = 30,
+        step_size: float = 1e-4,
+        burn: int = 0,
+        loss: str = "NLL",
+        tau_out: float = 1.0,
+        prior_var: float = 1.0,
+        load_prior: bool = False,
+        init_prior: bool = False,
+        sample_prior: bool = False,
+        prior_file: str = None,
+        device: str = "cpu",
+        debug: bool = False,
     ):
         """
         Run the VI-HMC algorithm to sample from the posterior distribution of parameters.
@@ -399,6 +422,9 @@ class VIHMCTrainer:
 
         :param valid_data: Data used to validate model performance.
         :type valid_data: torch.Dataloader
+
+        :param sens_data: `optional` Data used to compute sensitivities.
+        :type sens_data: torch.Dataloader
 
         :param variance_threshold: Threshold defining the captured variance in the VI-HMC algorithm.
                                    This threshold determines the number of sensitive parameters.
@@ -470,13 +496,15 @@ class VIHMCTrainer:
         self.logger.info(
             "UQpy: Scientific Machine Learning: Performing sensitivity analysis "
         )
-        sensitivity_scores, num_params = self.eval_sensitivity(
-            valid_data, var_threshold=variance_threshold
-        )
-        self.sens_indices = torch.argsort(sensitivity_scores, descending=True)[
-                            :num_params
-                            ].sort()[0]
-        self.history["vihmc_params"] = num_params.cpu().detach().numpy()
+        if self.sens_indices is None:
+            sensitivity_scores, num_params = self.eval_sensitivity(
+                train_data if sens_data is None else sens_data,
+                var_threshold=variance_threshold,
+            )
+            self.sens_indices = torch.argsort(sensitivity_scores, descending=True)[
+                :num_params
+            ].sort()[0]
+        self.history["vihmc_params"] = len(self.sens_indices)
         self.history["total_params"] = len(self.mean_params)
         self.logger.info(
             "UQpy: Scientific Machine Learning: Sensitivity analysis results"
@@ -488,7 +516,7 @@ class VIHMCTrainer:
             f"UQpy: Scientific Machine Learning: No of total parameters: {len(self.mean_params)}"
         )
         self.logger.info(
-            f"UQpy: Scientific Machine Learning: No of sensitive parameters: {num_params.cpu().detach().numpy()}"
+            f"UQpy: Scientific Machine Learning: No of sensitive parameters: {len(self.sens_indices)}"
         )
         self.logger.info(
             "============================================================="
@@ -559,7 +587,5 @@ class VIHMCTrainer:
             tau_out=tau_out,
             prior_list=prior_list,
         )
-        self.logger.info(
-            "UQpy: Scientific Machine Learning: Completed VI-HMC "
-        )
+        self.logger.info("UQpy: Scientific Machine Learning: Completed VI-HMC ")
         return params_hmc, pred_list, log_prob_list
