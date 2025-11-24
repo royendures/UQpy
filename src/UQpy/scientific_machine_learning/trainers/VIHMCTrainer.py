@@ -28,7 +28,7 @@ class VIHMCTrainer:
         :type vi_model: torch.nn.Module
 
         :param sensitivity_function: `optional` function handle to compute sensitivity of the model. This function
-        takes inputs and weights of the network and predicts output. Uses the functional call of `det_model` by default.
+        takes weights and inputs of the network and predicts output. Uses the functional call of `det_model` by default.
         :type sensitivity_function: function
 
         :param sensitivity_indices: `optional` list or array of indices of sensitive parameters. These indices are
