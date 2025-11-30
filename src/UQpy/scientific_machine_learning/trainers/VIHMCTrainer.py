@@ -12,11 +12,11 @@ from typing import Callable, List, Union
 @beartype
 class VIHMCTrainer:
     def __init__(
-        self,
-        det_model: nn.Module,
-        vi_model: nn.Module,
-        sensitivity_function: Callable = None,
-        sensitivity_indices: Union[List, np.ndarray, torch.Tensor] = None
+            self,
+            det_model: nn.Module,
+            vi_model: nn.Module,
+            sensitivity_function: Callable = None,
+            sensitivity_indices: Union[List, np.ndarray, torch.Tensor] = None
     ):
         """
         Prepare to train a Bayesian neural network using the hybrid VI–HMC approach.
@@ -42,6 +42,7 @@ class VIHMCTrainer:
         self.sens_fn = sensitivity_function
         self.mean_params, self.std_params = self._flatten_mean_std()
         self.sens_indices = sensitivity_indices
+        self.sensitivity_scores = None
         self.history: dict = {
             "vihmc_params": torch.inf,
             "total_params": torch.inf,
@@ -62,12 +63,12 @@ class VIHMCTrainer:
                 std_params.append(torch.log1p(torch.exp(param)).flatten())
         return torch.cat(mean_params), torch.cat(std_params)
 
-    def eval_sensitivity(self, valid_data, var_threshold):
+    def eval_sensitivity(self, sens_data, var_threshold):
         """
         Function to evaluate sensitivity scores.
 
-        :param valid_data: Dataset used to compute sensitivity scores.
-        :type valid_data: torch.DataLoader
+        :param sens_data: Dataset used to compute sensitivity scores.
+        :type sens_data: torch.DataLoader
 
         :param var_threshold: Threshold for the captured variance.
         :type var_threshold: float
@@ -81,12 +82,12 @@ class VIHMCTrainer:
             param.data = params_unflattened[cnt]
             cnt = cnt + 1
         grads_list = 0
-        num_batches = len(valid_data)
-        for i, batch_data in enumerate(valid_data):
+        num_batches = len(sens_data)
+        for i, batch_data in enumerate(sens_data):
             *x, y = batch_data
             grads_list += self.eval_jac(x) / num_batches
         assert i + 1 == num_batches
-        sensitivities = grads_list * (self.std_params**2)
+        sensitivities = grads_list * (self.std_params ** 2)
         tot_var = torch.sum(sensitivities)
         cumilative_sum = torch.cumsum(torch.sort(sensitivities, descending=True)[0], 0)
         return sensitivities, torch.sum(cumilative_sum / tot_var <= var_threshold)
@@ -139,24 +140,24 @@ class VIHMCTrainer:
             for jac in jacobian_output_to_params.values():
                 grads.append(
                     torch.mean(
-                        jac**2,
+                        jac ** 2,
                         dim=tuple(range(x[0].ndim)),
                     ).flatten()
                 )
         return torch.cat(grads)
 
     def define_model_log_prob(
-        self,
-        model_loss,
-        tr_data,
-        params_flattened_list,
-        params_shape_list,
-        prior_list,
-        tau_out,
-        load_prior=False,
-        predict=False,
-        prior_scale=1.0,
-        device="cpu",
+            self,
+            model_loss,
+            tr_data,
+            params_flattened_list,
+            params_shape_list,
+            prior_list,
+            tau_out,
+            load_prior=False,
+            predict=False,
+            prior_scale=1.0,
+            device="cpu",
     ):
         """
         This function is built on Hamiltorch and defines the ``log_prob_func`` for ``torch.nn.Module``
@@ -223,7 +224,7 @@ class VIHMCTrainer:
         else:
             for tau in prior_list:
                 dist_list.append(
-                    torch.distributions.Normal(torch.zeros_like(tau), tau**0.5)
+                    torch.distributions.Normal(torch.zeros_like(tau), tau ** 0.5)
                 )
 
         if model_loss == "NLL":
@@ -241,13 +242,13 @@ class VIHMCTrainer:
             else:
                 i_prev = 0
                 for weights, index, shape, dist in zip(
-                    self.model.parameters(),
-                    params_flattened_list,
-                    params_shape_list,
-                    dist_list,
+                        self.model.parameters(),
+                        params_flattened_list,
+                        params_shape_list,
+                        dist_list,
                 ):
                     # weights.data = params[i_prev:index+i_prev].reshape(shape)
-                    w = params[i_prev : index + i_prev]
+                    w = params[i_prev: index + i_prev]
                     l_prior = dist.log_prob(w).sum() + l_prior
                     i_prev += index
 
@@ -308,12 +309,12 @@ class VIHMCTrainer:
         return log_prob_func
 
     def predict_model(
-        self,
-        samples,
-        test_loader=None,
-        model_loss="multi_class_linear_output",
-        tau_out=1.0,
-        prior_list=None,
+            self,
+            samples,
+            test_loader=None,
+            model_loss="multi_class_linear_output",
+            tau_out=1.0,
+            prior_list=None,
     ):
         """
         This function is adapted from the Hamiltorch library and modified for DeepONets as needed.
@@ -395,24 +396,24 @@ class VIHMCTrainer:
         return torch.stack(pred_list), pred_log_prob_list
 
     def run(
-        self,
-        train_data: torch.utils.data.DataLoader,
-        valid_data: torch.utils.data.DataLoader,
-        sens_data: torch.utils.data.DataLoader = None,
-        variance_threshold: float = 0.9,
-        num_samples: int = 1000,
-        num_steps: int = 30,
-        step_size: float = 1e-4,
-        burn: int = 0,
-        loss: str = "NLL",
-        tau_out: float = 1.0,
-        prior_var: float = 1.0,
-        load_prior: bool = False,
-        init_prior: bool = False,
-        sample_prior: bool = False,
-        prior_file: str = None,
-        device: str = "cpu",
-        debug: bool = False,
+            self,
+            train_data: torch.utils.data.DataLoader,
+            valid_data: torch.utils.data.DataLoader,
+            sens_data: torch.utils.data.DataLoader = None,
+            variance_threshold: float = 0.9,
+            num_samples: int = 1000,
+            num_steps: int = 30,
+            step_size: float = 1e-4,
+            burn: int = 0,
+            loss: str = "NLL",
+            tau_out: float = 1.0,
+            prior_var: float = 1.0,
+            load_prior: bool = False,
+            init_prior: bool = False,
+            sample_prior: bool = False,
+            prior_file: str = None,
+            device: str = "cpu",
+            debug: bool = False,
     ):
         """
         Run the VI-HMC algorithm to sample from the posterior distribution of parameters.
@@ -497,13 +498,11 @@ class VIHMCTrainer:
             "UQpy: Scientific Machine Learning: Performing sensitivity analysis "
         )
         if self.sens_indices is None:
-            sensitivity_scores, num_params = self.eval_sensitivity(
-                train_data if sens_data is None else sens_data,
-                var_threshold=variance_threshold,
-            )
-            self.sens_indices = torch.argsort(sensitivity_scores, descending=True)[
-                :num_params
-            ].sort()[0]
+            self.sensitivity_scores, num_params = self.eval_sensitivity(train_data if sens_data is None else sens_data,
+                                                                        var_threshold=variance_threshold)
+            self.sens_indices = torch.argsort(self.sensitivity_scores, descending=True)[
+                                :num_params
+                                ].sort()[0]
         self.history["vihmc_params"] = len(self.sens_indices)
         self.history["total_params"] = len(self.mean_params)
         self.logger.info(
