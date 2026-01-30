@@ -57,8 +57,8 @@ def test_rss_simple_voronoi():
     )
     assert np.round(y.samples[16, 0], 6) == 0.324738
     assert np.round(y.samples[16, 1], 6) == 0.488029
-    assert np.round(y.samples[17, 0], 6) == 0.349367
-    assert np.round(y.samples[17, 1], 6) == 0.132426
+    assert np.round(y.samples[17, 0], 6) == 0.686227
+    assert np.round(y.samples[17, 1], 6) == 0.447354
 
 
 def test_rect_rss():

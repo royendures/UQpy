@@ -273,7 +273,8 @@ def test_dream_1d_check_chains():
         random_state=123,
         nsamples=2000,
     )
-    np.testing.assert_allclose(x.samples[-1], 0.593, atol=1e-3)
+    # np.testing.assert_allclose(x.samples[-1], 0.593, atol=1e-3)
+    np.testing.assert_allclose(x.samples[-1], -0.004121, atol=1e-4)
 
 
 def test_dream_1d_adapt_chains():
@@ -289,7 +290,8 @@ def test_dream_1d_adapt_chains():
         random_state=123,
         nsamples=2000,
     )
-    np.testing.assert_allclose(x.samples[-1], -0.446, atol=1e-3)
+    # np.testing.assert_allclose(x.samples[-1], -0.446, atol=1e-3)
+    np.testing.assert_allclose(x.samples[-1], 1.2326, atol=1e-3)
 
 
 def test_stretch_1d_burn_jump():

@@ -55,25 +55,30 @@ def svd(matrix, rank=None, tol=None):
     return u, s, v
 
 
-def nearest_psd(input_matrix, iterations=10):
-    """
-    A function to compute the nearest positive semi-definite matrix of a given matrix :cite:`Utilities3`.
-
-    :param numpy.ndarray input_matrix: Matrix to find the nearest PD.
-    :param iterations: Number of iterations to perform. Default: 10
-    :return: Nearest PSD matrix to input_matrix.
-    """
-    n = input_matrix.shape[0]
-    w = np.identity(n)
-    # w is the matrix used for the norm (assumed to be Identity matrix here)
-    # the algorithm should work for any diagonal W
+def nearest_psd(input_matrix, iterations=100, tol=1e-8):
+    # Dykstra's correction for the Higham (2002) algorithm.
+    # Ensure initial symmetry
+    psd_matrix = (input_matrix + input_matrix.T) / 2
     delta_s = 0
-    psd_matrix = input_matrix.copy()
-    for k in range(iterations):
+
+    for _ in range(iterations):
+        prev_psd = psd_matrix.copy()
+
+        # R_k = Y_{k-1} - dS_{k-1}
         r_k = psd_matrix - delta_s
-        x_k = _get_ps(r_k, w=w)
+
+        # X_k = P_S(R_k)
+        x_k = _get_ps(r_k)
+
+        # dS_k = X_k - R_k
         delta_s = x_k - r_k
-        psd_matrix = _get_pu(x_k, w=w)
+
+        # Y_k = P_U(X_k)
+        psd_matrix = _get_pu(x_k)
+
+        # Convergence check
+        if np.linalg.norm(psd_matrix - prev_psd, ord="fro") < tol:
+            break
 
     return psd_matrix
 
@@ -257,24 +262,18 @@ def bi_variate_normal_pdf(x1, x2, rho):
     )
 
 
-def _get_a_plus(a):
-    eig_val, eig_vec = np.linalg.eig(a)
-    q = np.asarray(eig_vec)
-    x_diagonal = np.asarray(np.diag(np.maximum(eig_val, 0)))
-
-    return q @ x_diagonal @ q.T
-
-
-def _get_ps(a, w=None):
-    w05 = np.asarray(w**0.5)
-
-    return w05 * _get_a_plus(w05 * a * w05) * w05
+def _get_ps(matrix, eps=1e-10):
+    """Project onto the PSD cone by clipping eigenvalues."""
+    s, v = np.linalg.eigh(matrix)
+    s = np.maximum(s, eps)
+    return v @ np.diag(s) @ v.T
 
 
-def _get_pu(a, w=None):
-    a_ret = np.array(a.copy())
-    a_ret[w > 0] = np.array(w)[w > 0]
-    return np.asarray(a_ret)
+def _get_pu(matrix):
+    """Project onto the space of matrices with unit diagonal."""
+    res = matrix.copy()
+    np.fill_diagonal(res, 1.0)
+    return res
 
 
 def _nn_coord(x, k):
