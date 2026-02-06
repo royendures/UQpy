@@ -294,6 +294,8 @@ class DREAM(MCMC):
             and self.iterations_number % self.crossover_adaptation[1] == 0
         ):
             self.cross_prob = self.j_ind / self.n_id
+            # clipping cross_prob to avoid numerical issues
+            self.cross_prob = np.clip(self.cross_prob, 0, 1)
             self.cross_prob /= sum(self.cross_prob)
         # check outlier chains (only if you have saved at least 100 values already)
         if (

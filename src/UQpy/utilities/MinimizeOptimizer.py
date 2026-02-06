@@ -37,7 +37,7 @@ class MinimizeOptimizer:
                 bounds=self._bounds,
                 constraints=self.constraints,
                 jac=jac,
-                options={"disp": False, "maxiter": 10000, "catol": 0.002},
+                options={"maxiter": 10000, "catol": 0.002},
             )
         else:
             return minimize(
@@ -48,7 +48,6 @@ class MinimizeOptimizer:
                 bounds=self._bounds,
                 jac=jac,
                 options={
-                    "disp": False,
                     "maxiter": 10000,
                 },
             )

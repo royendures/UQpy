@@ -181,7 +181,7 @@ class MonteCarloSampling:
                 z = self.samples[i, :]
                 for j in range(len(self.dist_object)):
                     if hasattr(self.dist_object[j], "cdf"):
-                        zi[i, j] = self.dist_object[j].cdf(z[j])
+                        zi[i, j] = self.dist_object[j].cdf(z[j]).item()
                     else:
                         raise ValueError(
                             "UQpy: All distributions must have a cdf method."
