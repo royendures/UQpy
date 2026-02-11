@@ -271,7 +271,7 @@ def test_dream_1d_check_chains():
         check_chains=(1000, 1),
         n_chains=20,
         random_state=123,
-        nsamples=10000,
+        nsamples=100000,
     )
 
     samples_flat = x.samples.flatten()
@@ -293,7 +293,7 @@ def test_dream_1d_adapt_chains():
         crossover_adaptation=(1000, 1),
         n_chains=20,
         random_state=123,
-        nsamples=10000,
+        nsamples=100000,
     )
     # Test that samples with crossover adaptation still converge to N(0,1)
     samples_flat = x.samples.flatten()
