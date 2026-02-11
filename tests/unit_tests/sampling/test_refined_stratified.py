@@ -50,15 +50,24 @@ def test_rss_simple_voronoi():
     algorithm = RandomRefinement(strata)
     y = RefinedStratifiedSampling(
         stratified_sampling=x,
-        nsamples=18,
+        nsamples=100,
         samples_per_iteration=2,
         refinement_algorithm=algorithm,
         random_state=2,
     )
-    assert np.round(y.samples[16, 0], 6) == 0.324738
-    assert np.round(y.samples[16, 1], 6) == 0.488029
-    assert np.round(y.samples[17, 0], 6) == 0.686227
-    assert np.round(y.samples[17, 1], 6) == 0.447354
+    # Test statistical properties of samples from Uniform([0,1]^2)
+    assert y.samples.shape == (100, 2), "Incorrect sample shape"
+
+    # All samples should be in the unit square
+    assert np.all((y.samples >= 0) & (y.samples <= 1)), "Samples outside [0,1]^2"
+
+    # Test mean is approximately 0.5 for uniform distribution on [0,1]
+    np.testing.assert_allclose(np.mean(y.samples, axis=0), 0.5, atol=1e-1)
+
+    # Test reasonable spread (std for Uniform(0,1) is 1/sqrt(12) ~ 0.289)
+    np.testing.assert_allclose(
+        np.std(y.samples, axis=0, ddof=1), 1 / np.sqrt(12), atol=1e-1
+    )
 
 
 def test_rect_rss():

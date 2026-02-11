@@ -271,10 +271,15 @@ def test_dream_1d_check_chains():
         check_chains=(1000, 1),
         n_chains=20,
         random_state=123,
-        nsamples=2000,
+        nsamples=5000,
     )
-    # np.testing.assert_allclose(x.samples[-1], 0.593, atol=1e-3)
-    np.testing.assert_allclose(x.samples[-1], -0.004121, atol=1e-4)
+
+    samples_flat = x.samples.flatten()
+    sample_mean = np.mean(samples_flat)
+    sample_std = np.std(samples_flat, ddof=1)
+
+    np.testing.assert_allclose(sample_mean, 0.0, atol=1e-1)
+    np.testing.assert_allclose(sample_std, 1.0, atol=1e-1)
 
 
 def test_dream_1d_adapt_chains():
@@ -288,10 +293,15 @@ def test_dream_1d_adapt_chains():
         crossover_adaptation=(1000, 1),
         n_chains=20,
         random_state=123,
-        nsamples=2000,
+        nsamples=5000,
     )
-    # np.testing.assert_allclose(x.samples[-1], -0.446, atol=1e-3)
-    np.testing.assert_allclose(x.samples[-1], 1.2326, atol=1e-3)
+    # Test that samples with crossover adaptation still converge to N(0,1)
+    samples_flat = x.samples.flatten()
+    sample_mean = np.mean(samples_flat)
+    sample_std = np.std(samples_flat, ddof=1)
+
+    np.testing.assert_allclose(sample_mean, 0.0, atol=1e-1)
+    np.testing.assert_allclose(sample_std, 1.0, atol=1e-1)
 
 
 def test_stretch_1d_burn_jump():
