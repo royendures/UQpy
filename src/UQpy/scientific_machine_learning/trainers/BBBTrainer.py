@@ -164,9 +164,9 @@ class BBBTrainer:
                 average_test_nll = total_test_nll / len(test_data)
                 self.history["test_nll"][i] = average_test_nll
                 log_message += f" Test NLL {average_test_nll:.6e}"
-                if average_test_loss < self.best_loss:
+                if average_test_nll < self.best_loss:
                     self.best_checkpoint = deepcopy(self.model.state_dict())
-                    self.best_loss = average_test_loss
+                    self.best_loss = average_test_nll
             self.logger.info(log_message)
 
             i += 1
