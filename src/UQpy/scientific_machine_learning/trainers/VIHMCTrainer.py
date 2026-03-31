@@ -289,7 +289,7 @@ class VIHMCTrainer:
                 )
 
             elif model_loss == "NLL":
-                ll = -1 * nll_loss(output, y_device, tau_out * torch.ones_like(output))
+                ll = -nll_loss(output, y_device, tau_out * torch.ones_like(output)) # pylint: disable=invalid-unary-operand-type
 
             elif callable(model_loss):
                 # Assume defined custom log-likelihood.
