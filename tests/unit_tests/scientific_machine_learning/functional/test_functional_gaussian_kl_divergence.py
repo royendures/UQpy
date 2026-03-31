@@ -32,7 +32,7 @@ def test_divergence_one_half():
 @given(
     shape=array_shapes(min_dims=1, min_side=1, max_side=100),
 )
-def test_divergence_zero(shape):
+def test_divergence_non_negative(shape):
     """For any distributions, the KL divergence is non-negative"""
     prior_mu = torch.rand(shape)
     prior_sigma = torch.rand(shape) + 1  # must be positive
