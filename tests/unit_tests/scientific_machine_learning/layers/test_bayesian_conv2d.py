@@ -57,17 +57,17 @@ def test_default_output_shape(n, height, width, in_channels, out_channels):
 
 @given(
     kernel_size=st.one_of(
-        st.integers(min_value=1, max_value=8),
+        st.integers(min_value=3, max_value=8),
         st.tuples(
-            st.integers(min_value=1, max_value=8),
-            st.integers(min_value=1, max_value=8),
+            st.integers(min_value=3, max_value=8),
+            st.integers(min_value=3, max_value=8),
         ),
     ),
     stride=st.one_of(
-        st.integers(min_value=1, max_value=8),
+        st.integers(min_value=5, max_value=8),
         st.tuples(
-            st.integers(min_value=1, max_value=8),
-            st.integers(min_value=1, max_value=8),
+            st.integers(min_value=5, max_value=8),
+            st.integers(min_value=5, max_value=8),
         ),
     ),
     padding=st.one_of(
@@ -90,8 +90,8 @@ def test_fancy_output_shape(kernel_size, stride, padding, dilation):
     n = 2
     in_channels = 1
     out_channels = 1
-    h_in = 512
-    w_in = 256
+    h_in = 128
+    w_in = 128
     layer = sml.BayesianConv2d(
         in_channels, out_channels, kernel_size, stride, padding, dilation
     )

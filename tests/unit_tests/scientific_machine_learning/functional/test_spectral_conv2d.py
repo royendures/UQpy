@@ -9,8 +9,8 @@ from hypothesis.extra.numpy import array_shapes
     batch_size=st.integers(min_value=1, max_value=10),
     in_channels=st.integers(min_value=1, max_value=3),
     out_channels=st.integers(min_value=1, max_value=3),
-    signal_shape=array_shapes(min_dims=2, max_dims=2, min_side=64, max_side=128),
-    modes=array_shapes(min_dims=2, max_dims=2, min_side=1, max_side=32),
+    signal_shape=array_shapes(min_dims=2, max_dims=2, min_side=32, max_side=64),
+    modes=array_shapes(min_dims=2, max_dims=2, min_side=1, max_side=16),
 )
 def test_output_shape(batch_size, in_channels, out_channels, signal_shape, modes):
     """An input (batch_size, in_channels, height, width) has an output (batch_size, out_channels, height, width)

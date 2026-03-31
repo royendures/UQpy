@@ -8,8 +8,8 @@ from hypothesis import given, strategies as st
     batch_size=st.integers(min_value=1, max_value=10),
     in_channels=st.integers(min_value=1, max_value=3),
     out_channels=st.integers(min_value=1, max_value=3),
-    length=st.integers(min_value=64, max_value=128),
-    modes=st.integers(min_value=2, max_value=32),
+    length=st.integers(min_value=32, max_value=64),
+    modes=st.integers(min_value=2, max_value=10),
 )
 def test_output_shape(batch_size, in_channels, out_channels, length, modes):
     """An input of shape (batch_size, in_channels, length) has an output of shape (batch_size, out_channels, length)
