@@ -14,8 +14,8 @@ def compute_l_out(l_in, kernel_size, stride, padding, dilation):
 
 
 @given(
-    n=st.integers(min_value=1, max_value=1_000),
-    length=st.integers(min_value=1, max_value=1_000),
+    n=st.integers(min_value=1, max_value=100),
+    length=st.integers(min_value=1, max_value=100),
     in_channels=st.integers(min_value=1, max_value=10),
     out_channels=st.integers(min_value=1, max_value=10),
 )

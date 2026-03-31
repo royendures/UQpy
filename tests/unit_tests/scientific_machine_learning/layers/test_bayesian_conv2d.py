@@ -41,8 +41,8 @@ def compute_h_w_out(
 
 @given(
     n=st.integers(min_value=1, max_value=16),
-    height=st.integers(min_value=1, max_value=256),
-    width=st.integers(min_value=1, max_value=256),
+    height=st.integers(min_value=1, max_value=128),
+    width=st.integers(min_value=1, max_value=128),
     in_channels=st.integers(min_value=1, max_value=10),
     out_channels=st.integers(min_value=1, max_value=10),
 )

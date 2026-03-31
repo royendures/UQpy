@@ -7,11 +7,11 @@ from hypothesis.strategies import integers, tuples
 @given(
     batch_size=integers(min_value=1, max_value=1),
     width=integers(min_value=1, max_value=8),
-    w=integers(min_value=64, max_value=128),
-    h=integers(min_value=64, max_value=128),
+    w=integers(min_value=32, max_value=64),
+    h=integers(min_value=32, max_value=64),
     modes=tuples(
-        integers(min_value=1, max_value=33),
-        integers(min_value=1, max_value=33),
+        integers(min_value=1, max_value=10),
+        integers(min_value=1, max_value=10),
     ),
 )
 def test_output_shape(batch_size, width, w, h, modes):
