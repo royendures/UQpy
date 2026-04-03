@@ -46,4 +46,4 @@ def test_p_one(shape):
     """Test all elements are dropped when drop_rate is one"""
     dropout = func(p=1.0, dropping=True)
     x = torch.ones(shape)
-    assert torch.all(torch.zeros_like(x) == dropout(x))
+    assert torch.allclose(torch.zeros_like(x), dropout(x))

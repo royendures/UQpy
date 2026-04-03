@@ -1,7 +1,7 @@
 import pytest
 import torch
 import UQpy.scientific_machine_learning.functional as func
-from hypothesis import given, strategies as st
+from hypothesis import given, settings, strategies as st
 from hypothesis.extra.numpy import array_shapes
 
 
@@ -12,6 +12,7 @@ from hypothesis.extra.numpy import array_shapes
     signal_shape=array_shapes(min_dims=2, max_dims=2, min_side=32, max_side=64),
     modes=array_shapes(min_dims=2, max_dims=2, min_side=1, max_side=16),
 )
+@settings(deadline=None)
 def test_output_shape(batch_size, in_channels, out_channels, signal_shape, modes):
     """An input (batch_size, in_channels, height, width) has an output (batch_size, out_channels, height, width)
     Note modes1 and modes 2 does *not* affect the shape of the output

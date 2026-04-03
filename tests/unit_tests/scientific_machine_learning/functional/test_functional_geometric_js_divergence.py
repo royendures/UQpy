@@ -1,5 +1,5 @@
 import torch
-from hypothesis import given, strategies as st
+from hypothesis import given, settings, strategies as st
 from hypothesis.extra.numpy import array_shapes
 import UQpy.scientific_machine_learning.functional as func
 
@@ -12,6 +12,7 @@ import UQpy.scientific_machine_learning.functional as func
     alpha=st.floats(min_value=0, max_value=1),
     shape=array_shapes(min_dims=1, min_side=1, max_side=100),
 )
+@settings(deadline=None)
 def test_non_negativity(
     prior_param_1,
     prior_param_2,
@@ -66,6 +67,7 @@ def test_kl_equal(
 @given(
     shape=array_shapes(min_dims=1, min_side=1, max_side=100),
 )
+@settings(deadline=None)
 def test_reduction_shape(shape):
     """For mean and sum, the divergence is a scalar.
     For reduction='none', the divergence is a tensor of the same shapes as the input

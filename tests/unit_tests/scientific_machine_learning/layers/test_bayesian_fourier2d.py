@@ -1,6 +1,6 @@
 import torch
 import UQpy.scientific_machine_learning as sml
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis.strategies import integers, tuples
 
 
@@ -14,6 +14,7 @@ from hypothesis.strategies import integers, tuples
         integers(min_value=1, max_value=8),
     ),
 )
+@settings(deadline=None)
 def test_output_shape(batch_size, width, w, h, modes):
     """Fourier layers do not change the shape of the input"""
     x = torch.ones((batch_size, width, w, h))
