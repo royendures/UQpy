@@ -51,19 +51,20 @@ jobs:
         echo "Current version: $(GitVersion.SemVer)"
       displayName: Shows currently compiling version
 
-    - task: SonarCloudPrepare@3
-      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
-      inputs:
-        SonarCloud: 'SonarCloud.UQpy'
-        organization: 'jhusurg'
-        scannerMode: 'CLI'
-        configMode: 'manual'
-        cliProjectKey: 'SURGroup_UQpy'
-        cliProjectName: 'UQpy'
-        cliSources: '.'
-        extraProperties: |
-          sonar.exclusions=**/example/**, **/tests/**, **/docs/**
-          sonar.python.coverage.reportPaths=./coverage.xml
+    # SonarCloud tasks commented out - requires SonarCloud.UQpy service connection
+    # - task: SonarCloudPrepare@3
+    #   condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
+    #   inputs:
+    #     SonarCloud: 'SonarCloud.UQpy'
+    #     organization: 'jhusurg'
+    #     scannerMode: 'CLI'
+    #     configMode: 'manual'
+    #     cliProjectKey: 'SURGroup_UQpy'
+    #     cliProjectName: 'UQpy'
+    #     cliSources: '.'
+    #     extraProperties: |
+    #       sonar.exclusions=**/example/**, **/tests/**, **/docs/**
+    #       sonar.python.coverage.reportPaths=./coverage.xml
 
     - script: |
         pip install -r requirements.txt
@@ -90,13 +91,13 @@ jobs:
       inputs:
         summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
 
-    - task: SonarCloudAnalyze@3
-      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
+    # - task: SonarCloudAnalyze@3
+    #   condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
 
-    - task: SonarCloudPublish@3
-      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
-      inputs:
-        pollingTimeoutSec: '300'
+    # - task: SonarCloudPublish@3
+    #   condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
+    #   inputs:
+    #     pollingTimeoutSec: '300'
 
     - script: |
         pip install build
@@ -126,64 +127,66 @@ jobs:
         TWINE_USERNAME: $(TESTPYPIU)
         TWINE_PASSWORD: $(TESTPYPIP)
 
-    - task: GitHubRelease@1
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-      inputs:
-        gitHubConnection: 'GitHub_OAuth'
-        repositoryName: '$(Build.Repository.Name)'
-        action: 'create'
-        target: '$(Build.SourceVersion)'
-        tagSource: 'userSpecifiedTag'
-        tag: 'v$(GitVersion.SemVer)'
-        changeLogCompareToRelease: 'lastFullRelease'
-        changeLogType: 'commitBased'
+    # GitHub Release commented out - requires GitHub_OAuth service connection
+    # - task: GitHubRelease@1
+    #   condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+    #   inputs:
+    #     gitHubConnection: 'GitHub_OAuth'
+    #     repositoryName: '$(Build.Repository.Name)'
+    #     action: 'create'
+    #     target: '$(Build.SourceVersion)'
+    #     tagSource: 'userSpecifiedTag'
+    #     tag: 'v$(GitVersion.SemVer)'
+    #     changeLogCompareToRelease: 'lastFullRelease'
+    #     changeLogType: 'commitBased'
 
-- job: "Create_Docker_images"
-  dependsOn: Build_UQpy_and_run_tests
-  pool:
-     vmImage: "ubuntu-latest"
-  steps:
-    - checkout: self
-      fetchDepth: 0 
-
-    - task: gitversion-setup@4
-      displayName: Setup GitVersion
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-      inputs:
-        versionSpec: '5.x'
-
-    - task: gitversion-execute@4
-      displayName: Calculate GitVersion
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-      inputs:
-        useConfigFile: true
-        configFilePath: 'GitVersion.yml'
-
-    - task: Docker@2
-      displayName: Login to Dockerhub
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-      inputs:
-        containerRegistry: 'docker_registry_surg'
-        command: 'login'
-
-    - powershell: |
-          echo "Current version: $(GitVersion.SemVer)"
-      displayName: Shows currently compiling version
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-
-    - task: Docker@2
-      displayName: Build and push packages to Dockerhub
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-      inputs:
-        containerRegistry: 'docker_registry_surg'
-        command: 'buildAndPush'
-        repository: 'surgroup/uqpy'
-        Dockerfile: 'Dockerfile'
-        tags: '$(GitVersion.SemVer)'
-
-    - task: Docker@2
-      displayName: Logout from Dockerhub
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-      inputs:
-        containerRegistry: 'docker_registry_surg'
-        command: 'logout'
+# Docker job commented out - requires docker_registry_surg service connection
+# - job: "Create_Docker_images"
+#   dependsOn: Build_UQpy_and_run_tests
+#   pool:
+#      vmImage: "ubuntu-latest"
+#   steps:
+#     - checkout: self
+#       fetchDepth: 0
+#
+#     - task: gitversion-setup@4
+#       displayName: Setup GitVersion
+#       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+#       inputs:
+#         versionSpec: '5.x'
+#
+#     - task: gitversion-execute@4
+#       displayName: Calculate GitVersion
+#       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+#       inputs:
+#         useConfigFile: true
+#         configFilePath: 'GitVersion.yml'
+#
+#     - task: Docker@2
+#       displayName: Login to Dockerhub
+#       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+#       inputs:
+#         containerRegistry: 'docker_registry_surg'
+#         command: 'login'
+#
+#     - powershell: |
+#           echo "Current version: $(GitVersion.SemVer)"
+#       displayName: Shows currently compiling version
+#       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+#
+#     - task: Docker@2
+#       displayName: Build and push packages to Dockerhub
+#       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+#       inputs:
+#         containerRegistry: 'docker_registry_surg'
+#         command: 'buildAndPush'
+#         repository: 'surgroup/uqpy'
+#         Dockerfile: 'Dockerfile'
+#         tags: '$(GitVersion.SemVer)'
+#
+#     - task: Docker@2
+#       displayName: Logout from Dockerhub
+#       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+#       inputs:
+#         containerRegistry: 'docker_registry_surg'
+#         command: 'logout'
