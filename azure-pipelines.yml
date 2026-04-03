@@ -36,12 +36,12 @@ jobs:
       inputs:
         versionSpec: "$(pythonVersion)"
 
-    - task: gitversion/setup@0
+    - task: gitversion-setup@4
       displayName: Setup GitVersion
       inputs:
         versionSpec: '5.x'
 
-    - task: gitversion/execute@0
+    - task: gitversion-execute@4
       displayName: Calculate GitVersion
       inputs:
         useConfigFile: true
@@ -146,13 +146,13 @@ jobs:
     - checkout: self
       fetchDepth: 0 
 
-    - task: gitversion/setup@0
+    - task: gitversion-setup@4
       displayName: Setup GitVersion
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
       inputs:
         versionSpec: '5.x'
 
-    - task: gitversion/execute@0
+    - task: gitversion-execute@4
       displayName: Calculate GitVersion
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
       inputs:
