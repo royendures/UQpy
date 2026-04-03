@@ -5,7 +5,7 @@
 
 
 variables:
-  pythonVersion: 3.9
+  pythonVersion: 3.12
   srcDirectory: src
   
 trigger:
@@ -28,17 +28,20 @@ jobs:
     vmImage: "macOS-latest"
 
   steps:
+    - checkout: self
+      fetchDepth: 0
+
     - task: UsePythonVersion@0
       displayName: "Use Python $(pythonVersion)"
       inputs:
         versionSpec: "$(pythonVersion)"
 
-    - task: gitversion/setup@0
+    - task: gitversion/setup@3
       displayName: Setup GitVersion
       inputs:
         versionSpec: '5.x'
 
-    - task: gitversion/execute@0
+    - task: gitversion/execute@3
       displayName: Calculate GitVersion
       inputs:
         useConfigFile: true
@@ -48,7 +51,7 @@ jobs:
         echo "Current version: $(GitVersion.SemVer)"
       displayName: Shows currently compiling version
 
-    - task: SonarCloudPrepare@1
+    - task: SonarCloudPrepare@3
       condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
       inputs:
         SonarCloud: 'SonarCloud.UQpy'
@@ -83,23 +86,21 @@ jobs:
         testResultsFiles: '**/test-*.xml'
         testRunTitle: 'Publish test results for Python $(python.version)'
 
-    - task: PublishCodeCoverageResults@1
+    - task: PublishCodeCoverageResults@2
       inputs:
-        codeCoverageTool: Cobertura
         summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
-        reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
-        additionalCodeCoverageFiles: '$(System.DefaultWorkingDirectory)/ **'
 
-    - task: SonarCloudAnalyze@1
+    - task: SonarCloudAnalyze@3
       condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
 
-    - task: SonarCloudPublish@1
+    - task: SonarCloudPublish@3
       condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
       inputs:
         pollingTimeoutSec: '300'
 
     - script: |
-        python setup.py $(GitVersion.SemVer) sdist bdist_wheel
+        pip install build
+        UQPY_VERSION=$(GitVersion.SemVer) python -m build
       displayName: Artifact creation
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
 
@@ -110,7 +111,7 @@ jobs:
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
-    - task: PublishBuildArtifacts@1
+    - task: PublishPipelineArtifact@1
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
       inputs:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -118,9 +119,12 @@ jobs:
         publishLocation: 'Container'
 
     - script: |
-        twine upload --repository-url https://upload.pypi.org/legacy/ dist/* --username "$(TESTPYPIU)" --password "$(TESTPYPIP)"
+        twine upload --non-interactive dist/*
       displayName: Upload to PyPi
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      env:
+        TWINE_USERNAME: $(TESTPYPIU)
+        TWINE_PASSWORD: $(TESTPYPIP)
 
     - task: GitHubRelease@1
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
@@ -139,13 +143,16 @@ jobs:
   pool:
      vmImage: "ubuntu-latest"
   steps:
-    - task: gitversion/setup@0
+    - checkout: self
+      fetchDepth: 0 
+
+    - task: gitversion/setup@3
       displayName: Setup GitVersion
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
       inputs:
         versionSpec: '5.x'
 
-    - task: gitversion/execute@0
+    - task: gitversion/execute@3
       displayName: Calculate GitVersion
       condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
       inputs:
