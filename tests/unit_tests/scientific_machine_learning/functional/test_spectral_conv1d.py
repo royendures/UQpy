@@ -1,7 +1,7 @@
 import pytest
 import torch
 import UQpy.scientific_machine_learning.functional as func
-from hypothesis import given, strategies, settings as st
+from hypothesis import given, settings, strategies as st
 
 
 @given(
