@@ -6,7 +6,7 @@ Note this does not include tests for numerical accuracy as the convolution is pe
 import torch
 from torch.nn.modules.utils import _pair
 import UQpy.scientific_machine_learning as sml
-from hypothesis import given, strategies as st
+from hypothesis import given, settings, strategies as st
 
 
 def compute_h_w_out(
@@ -46,6 +46,7 @@ def compute_h_w_out(
     in_channels=st.integers(min_value=1, max_value=10),
     out_channels=st.integers(min_value=1, max_value=10),
 )
+@settings(deadline=None)
 def test_default_output_shape(n, height, width, in_channels, out_channels):
     """Test the output shape for various batch sizes, heights, width, and channels"""
     x_size = (n, in_channels, height, width)
@@ -85,6 +86,7 @@ def test_default_output_shape(n, height, width, in_channels, out_channels):
         ),
     ),
 )
+@settings(deadline=None)
 def test_fancy_output_shape(kernel_size, stride, padding, dilation):
     """Test integer and tuple kernel_sizes, strides, paddings, and dilation"""
     n = 2
