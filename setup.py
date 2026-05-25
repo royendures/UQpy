@@ -48,7 +48,7 @@ setup(
         "dev": [
             "pytest == 8.2.0",
             "pytest-cov == 5.0.0",
-            "pylint == 3.1.0",
+            "pylint >= 3.2.0",
             "pytest-azurepipelines == 1.0.5",
             "pytest-cov == 5.0.0",
             "wheel == 0.43.0",
