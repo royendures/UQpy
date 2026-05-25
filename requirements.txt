@@ -6,7 +6,7 @@ fire == 0.6.0
 pytest == 8.2.0
 coverage == 7.5.0
 pytest-cov == 5.0.0
-pylint == 3.1.0
+pylint >= 3.2.0
 wheel == 0.43.0
 pytest-azurepipelines == 1.0.5
 twine == 5.0.0
