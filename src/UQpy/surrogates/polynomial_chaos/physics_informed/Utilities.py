@@ -118,7 +118,7 @@ def construct_basis(
     if derivative_order >= 0:
         ns = multindex[:, leading_variable]
         polysd = []
-
+        prep_l_deriv = None
         if mask_lege[leading_variable]:
             for n in ns:
                 polysd.append(legendre(n).deriv(derivative_order))
