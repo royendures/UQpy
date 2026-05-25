@@ -48,7 +48,7 @@ jobs:
         configFilePath: 'GitVersion.yml'
 
     - powershell: |
-        echo "Current version: $(GitVersion.SemVer)"
+        echo "Current version: $env:GITVERSION_SEMVER"
       displayName: Shows currently compiling version
 
     - task: SonarCloudPrepare@3
