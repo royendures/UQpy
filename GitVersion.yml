@@ -8,7 +8,7 @@ commit-message-incrementing: Enabled
 
 branches:
   main:
-    mode: Mainline
+    is-mainline: true
     regex: ^main$
     is-main-branch: true
     increment: Patch
