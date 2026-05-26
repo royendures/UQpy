@@ -76,7 +76,7 @@ def generalized_jensen_shannon_divergence(
                 ((1 - alpha) * kl_divergence_q_m) + (alpha * kl_divergence_p_m)
             ).item()
     js_divergence /= n_samples
-    js_divergence = torch.tensor(js_divergence, device=device)
+    js_divergence = torch.tensor(js_divergence, dtype=torch.float32, device=device)
 
     if reduction == "none":
         return js_divergence
