@@ -144,7 +144,7 @@ class SORM(TaylorSeries):
         matrix_b = np.dot(np.dot(r1, hessian_g), r1.T) / np.linalg.norm(
             state_function_gradient_record[-1]
         )
-        kappa = np.linalg.eig(matrix_b[: self.dimension - 1, : self.dimension - 1])
+        kappa = np.linalg.eigh(matrix_b[: self.dimension - 1, : self.dimension - 1]) # eigh is used to avoid imaginary eigen values since matrix B is symmetric
         if self.call is None:
             self.failure_probability = [
                 stats.norm.cdf(-1 * beta) * np.prod(1 / (1 + beta * kappa[0]) ** 0.5)

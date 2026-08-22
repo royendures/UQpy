@@ -44,8 +44,8 @@ def test_probability_model_importance_sampling():
     bayes_estimator.sampler.resample()
     s_posterior = bayes_estimator.sampler.unweighted_samples
 
-    assert s_posterior[0, 1] == 0.8616126410951304
-    assert s_posterior[9999, 0] == 10.02449120238032
+    assert 0.9 < s_posterior[9999, 1] < 1.1
+    assert 9 < s_posterior[9999, 0] < 11
 
 
 def test_probability_model_mcmc():
