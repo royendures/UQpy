@@ -9,7 +9,7 @@ variables:
   srcDirectory: src
   
 trigger:
-  - master
+  - main
   - Development
   - feature/*
   - bugfix/*
@@ -18,7 +18,7 @@ trigger:
 pr:
   branches:
     include:
-    - master
+    - main
     - Development
 
 jobs:
@@ -52,7 +52,7 @@ jobs:
       displayName: Shows currently compiling version
 
     - task: SonarCloudPrepare@3
-      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
+      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['System.PullRequest.TargetBranch'], 'main'))
       inputs:
         SonarCloud: 'SonarCloud.UQpy'
         organization: 'jhusurg'
@@ -91,10 +91,10 @@ jobs:
         summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
 
     - task: SonarCloudAnalyze@3
-      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
+      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['System.PullRequest.TargetBranch'], 'main'))
 
     - task: SonarCloudPublish@3
-      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['System.PullRequest.TargetBranch'], 'master'))
+      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['System.PullRequest.TargetBranch'], 'main'))
       inputs:
         pollingTimeoutSec: '300'
 
@@ -103,17 +103,17 @@ jobs:
         echo "$(GitVersion.SemVer)" > VERSION
         python -m build
       displayName: Artifact creation
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
 
     - task: CopyFiles@2
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
       inputs:
         SourceFolder: 'dist'
         Contents: '**'
         TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
     - task: PublishPipelineArtifact@1
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
       inputs:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)'
         ArtifactName: 'dist'
@@ -122,13 +122,13 @@ jobs:
     - script: |
         twine upload --non-interactive dist/*
       displayName: Upload to PyPi
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
       env:
         TWINE_USERNAME: $(TESTPYPIU)
         TWINE_PASSWORD: $(TESTPYPIP)
 
     - task: GitHubRelease@1
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
       inputs:
         gitHubConnection: 'GitHub_OAuth'
         repositoryName: '$(Build.Repository.Name)'
@@ -149,20 +149,20 @@ jobs:
 
     - task: gitversion-setup@4
       displayName: Setup GitVersion
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
       inputs:
         versionSpec: '6.x'
 
     - task: gitversion-execute@4
       displayName: Calculate GitVersion
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
       inputs:
         useConfigFile: true
         configFilePath: 'GitVersion.yml'
 
     - task: Docker@2
       displayName: Login to Dockerhub
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
       inputs:
         containerRegistry: 'docker_registry_surg'
         command: 'login'
@@ -170,11 +170,11 @@ jobs:
     - powershell: |
           echo "Current version: $(GitVersion.SemVer)"
       displayName: Shows currently compiling version
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
 
     - task: Docker@2
       displayName: Build and push packages to Dockerhub
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
       inputs:
         containerRegistry: 'docker_registry_surg'
         command: 'buildAndPush'
@@ -184,7 +184,7 @@ jobs:
 
     - task: Docker@2
       displayName: Logout from Dockerhub
-      condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
       inputs:
         containerRegistry: 'docker_registry_surg'
         command: 'logout'
