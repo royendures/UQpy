@@ -52,7 +52,7 @@ jobs:
       displayName: Shows currently compiling version
 
     - task: SonarCloudPrepare@3
-      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['System.PullRequest.TargetBranch'], 'main'))
+      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['System.PullRequest.TargetBranch'], 'refs/heads/main'))
       inputs:
         SonarCloud: 'SonarCloud.UQpy'
         organization: 'jhusurg'
@@ -91,10 +91,10 @@ jobs:
         summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
 
     - task: SonarCloudAnalyze@3
-      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['System.PullRequest.TargetBranch'], 'main'))
+      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['System.PullRequest.TargetBranch'], 'refs/heads/main'))
 
     - task: SonarCloudPublish@3
-      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['System.PullRequest.TargetBranch'], 'main'))
+      condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['System.PullRequest.TargetBranch'], 'refs/heads/main'))
       inputs:
         pollingTimeoutSec: '300'
 
